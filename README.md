@@ -30,4 +30,5 @@ This branch is the source-only rewrite workspace for `sheehan-j/budgeting-app`.
 - `DATABASE_URL` defaults to `postgres://postgres:postgres@127.0.0.1:54329/jsheehan_budget`; override it in `.env` as needed.
 - `npm run dev` now serves the preserved root frontend with Vite and the Express API together.
 - Auth is now Express cookie-session auth backed by the `app_users` table rather than Supabase Auth.
-- Plaid currently has a dashboard status card and backend status endpoint; the actual Link/token flow is still the next implementation step.
+- Plaid now has persisted item/account state plus authenticated status, link-token, exchange, sync, and disconnect endpoints; set `PLAID_CLIENT_ID` and `PLAID_SECRET` in `.env` to enable the dashboard flow.
+- The Plaid pass maps synced transactions back into the existing transaction table and preserved UI using the synthetic configuration name `Plaid`.

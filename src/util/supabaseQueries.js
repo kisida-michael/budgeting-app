@@ -365,3 +365,49 @@ export const deleteUpload = async (uploadId) => {
 		throw Error(error.message);
 	}
 };
+
+export const getPlaidStatus = async () => {
+	try {
+		return await apiRequest("/api/plaid/status");
+	} catch (error) {
+		if (!isUnauthorized(error)) throw error;
+		return {
+			available: false,
+			reason: "Unauthorized",
+			connectedItems: 0,
+			connectedAccounts: 0,
+			lastSyncAt: null,
+			items: [],
+		};
+	}
+};
+
+export const createPlaidLinkToken = async () => {
+	return await apiRequest("/api/plaid/link-token", {
+		method: "POST",
+	});
+};
+
+export const exchangePlaidPublicToken = async ({ publicToken, institutionId, institutionName }) => {
+	return await apiRequest("/api/plaid/exchange", {
+		method: "POST",
+		body: JSON.stringify({
+			publicToken,
+			institutionId,
+			institutionName,
+		}),
+	});
+};
+
+export const syncPlaidTransactions = async (itemId = null) => {
+	return await apiRequest("/api/plaid/sync", {
+		method: "POST",
+		body: JSON.stringify(itemId ? { itemId } : {}),
+	});
+};
+
+export const disconnectPlaidItem = async (itemId) => {
+	return await apiRequest(`/api/plaid/items/${itemId}`, {
+		method: "DELETE",
+	});
+};

@@ -11,7 +11,11 @@
 - [x] Replace Supabase auth and direct table queries in the existing frontend with the new backend/auth flow.
 - [x] Fix post-login popup regressions by deferring hidden dashboard/settings fetches to the components that actually need them.
 - [x] Normalize API response shapes still expected in snake_case by the preserved frontend.
-- [ ] Add Plaid UI and connection flows into the existing frontend without changing the current interface structure.
+- [x] Add Plaid persistence tables and migration support for items, accounts, and sync cursors.
+- [x] Implement backend Plaid client and authenticated routes for status, link token creation, public token exchange, sync, and disconnect.
+- [x] Map Plaid accounts/transactions into the existing transaction/category model without changing current frontend screens.
+- [x] Wire the preserved dashboard Plaid card to Link, connect, sync, and connection-state UX without changing the interface structure.
+- [x] Validate the Plaid pass with lint/build plus authenticated API smoke tests for status and guarded connect/sync behavior.
 
 ## Review
 - Cloned `sheehan-j/budgeting-app` into this project root.
@@ -34,3 +38,8 @@
 - Deferred configuration and merchant fetches so the hidden dashboard upload modal no longer triggers settings-side requests right after login.
 - Moved merchant and upload fetching responsibility back into the preserved settings/upload components and normalized upload timestamps back to the frontend's expected `created_at` shape.
 - Verified `npm run lint`, `npm run build`, authenticated `GET /api/configurations`, authenticated `GET /api/merchants`, and authenticated `GET /api/uploads`.
+- Added persisted Plaid item/account state plus Plaid identifiers on synced transactions, and generated `server/drizzle/0002_glamorous_beast.sql`.
+- Added authenticated Plaid routes for status, link token creation, public token exchange, sync, and disconnect, with config-aware `503` guards when Plaid secrets are not set.
+- Wired the preserved dashboard Plaid card to `react-plaid-link`, connection status, manual sync, disconnect, and data refresh back into the existing dashboard/budget stores.
+- Documented Plaid env setup in `.env.example` and `README.md`.
+- Verified `npm run typecheck`, `npm run lint`, `npm run build`, `npm run db:generate`, `npm run db:migrate`, authenticated `GET /api/plaid/status`, and guarded `POST /api/plaid/link-token` returning `503` without Plaid credentials.

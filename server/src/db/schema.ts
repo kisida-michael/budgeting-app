@@ -50,6 +50,36 @@ export const appUsers = pgTable(
   })
 );
 
+export const plaidItems = pgTable("plaid_items", {
+  itemId: varchar("item_id", { length: 128 }).primaryKey(),
+  userId: text("user_id").notNull(),
+  accessToken: text("access_token").notNull(),
+  institutionId: varchar("institution_id", { length: 128 }),
+  institutionName: text("institution_name"),
+  lastCursor: text("last_cursor"),
+  lastSyncAt: timestamp("last_sync_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull()
+});
+
+export const plaidAccounts = pgTable("plaid_accounts", {
+  accountId: varchar("account_id", { length: 128 }).primaryKey(),
+  itemId: varchar("item_id", { length: 128 })
+    .references(() => plaidItems.itemId, { onDelete: "cascade" })
+    .notNull(),
+  userId: text("user_id").notNull(),
+  name: text("name").notNull(),
+  officialName: text("official_name"),
+  mask: varchar("mask", { length: 32 }),
+  type: varchar("type", { length: 64 }).notNull(),
+  subtype: varchar("subtype", { length: 64 }),
+  availableBalance: numeric("available_balance", { precision: 12, scale: 2 }),
+  currentBalance: numeric("current_balance", { precision: 12, scale: 2 }),
+  isoCurrencyCode: varchar("iso_currency_code", { length: 8 }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull()
+});
+
 export const configurations = pgTable(
   "configurations",
   {
@@ -127,11 +157,24 @@ export const transactions = pgTable("transactions", {
   merchant: text("merchant").notNull(),
   ignored: boolean("ignored").default(false).notNull(),
   uploadId: uuid("upload_id").references(() => uploads.id, { onDelete: "cascade" }),
+  plaidAccountId: varchar("plaid_account_id", { length: 128 }).references(() => plaidAccounts.accountId, {
+    onDelete: "cascade"
+  }),
+  plaidTransactionId: varchar("plaid_transaction_id", { length: 128 }),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull()
-});
+},
+  (table) => ({
+    userPlaidTransactionIdUnique: uniqueIndex("transactions_user_plaid_transaction_id_unique").on(
+      table.userId,
+      table.plaidTransactionId
+    )
+  })
+);
 
 export type Category = typeof categories.$inferSelect;
 export type NewCategory = typeof categories.$inferInsert;
 export type Transaction = typeof transactions.$inferSelect;
 export type NewTransaction = typeof transactions.$inferInsert;
+export type PlaidItem = typeof plaidItems.$inferSelect;
+export type PlaidAccount = typeof plaidAccounts.$inferSelect;

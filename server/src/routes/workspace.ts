@@ -365,8 +365,4 @@ router.delete("/uploads/:id", async (req, res) => {
   res.json({ ok: true });
 });
 
-router.get("/plaid/status", (_req, res) => {
-  res.json({ available: false, reason: "Plaid flow not wired yet in this pass." });
-});
-
 export { router as workspaceRouter };

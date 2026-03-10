@@ -6,6 +6,7 @@ import { env } from "./env.js";
 import { createAppMetaResponse, createHealthResponse } from "@budget/shared";
 import { db, connection } from "./db/client.js";
 import { authRouter } from "./routes/auth.js";
+import { plaidRouter } from "./routes/plaid.js";
 import { workspaceRouter } from "./routes/workspace.js";
 
 const app = express();
@@ -50,6 +51,7 @@ app.get("/api/db/health", async (_req, res) => {
 });
 
 app.use("/api/auth", authRouter);
+app.use("/api/plaid", plaidRouter);
 app.use("/api", workspaceRouter);
 
 app.listen(env.PORT, () => {
