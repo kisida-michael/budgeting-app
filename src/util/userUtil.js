@@ -1,15 +1,11 @@
-import supabase from "../config/supabaseClient";
+import { apiRequest } from "../config/apiClient";
 
 export const isEmailWhitelisted = async (email) => {
-  const { data, error } = await supabase
-  .from('whitelist')
-  .select('email')
-  .eq('email', email);
-
-  if (error) {
-    console.error("Could not get whitelisted emails.");
-    return false;
-  }
-
-  return data.length === 1;
-}
+	try {
+		const data = await apiRequest(`/api/auth/whitelist?email=${encodeURIComponent(email)}`);
+		return data.whitelisted === true;
+	} catch {
+		console.error("Could not get whitelisted emails.");
+		return false;
+	}
+};

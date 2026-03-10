@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useDataStore } from "../util/dataStore";
 import { deleteUpload } from "../util/supabaseQueries";
 import ButtonSpinner from "./ButtonSpinner";
@@ -27,6 +27,11 @@ const Uploads = () => {
 	}));
 	const bottomRef = useRef(null);
 	const [deleting, setDeleting] = useState(null);
+
+	useEffect(() => {
+		fetchUploads();
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, []);
 
 	const handleDelete = async (uploadId) => {
 		if (deleting !== null) return;

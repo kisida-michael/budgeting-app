@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useDataStore } from "../util/dataStore";
 import MerchantSettingsItem from "./MerchantSettingsItem";
 import MerchantSettingsItemCreate from "./MerchantSettingsItemCreate";
@@ -10,6 +10,7 @@ import ButtonSpinner from "./ButtonSpinner";
 const MerchantSettings = () => {
 	const {
 		merchantSettings,
+		fetchMerchantSettings,
 		editingMerchantSetting,
 		setEditingMerchantSetting,
 		filters,
@@ -18,6 +19,7 @@ const MerchantSettings = () => {
 		setNotification,
 	} = useDataStore((state) => ({
 		merchantSettings: state.merchantSettings,
+		fetchMerchantSettings: state.fetchMerchantSettings,
 		editingMerchantSetting: state.editingMerchantSetting,
 		setEditingMerchantSetting: state.setEditingMerchantSetting,
 		filters: state.filters,
@@ -33,6 +35,11 @@ const MerchantSettings = () => {
 	});
 	const [merchantSearch, setMerchantSearch] = useState("");
 	const bottomRef = useRef(null);
+
+	useEffect(() => {
+		if (merchantSettings === null) fetchMerchantSettings();
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, []);
 
 	const onClickCreate = () => {
 		if (Object.values(loading).some((value) => value)) return;

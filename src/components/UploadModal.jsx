@@ -20,6 +20,7 @@ const UploadModal = () => {
 	const {
 		configurations,
 		fetchConfigurations,
+		fetchMerchantSettings,
 		setNotification,
 		fetchTransactions,
 		fetchDashboardStats,
@@ -29,6 +30,7 @@ const UploadModal = () => {
 	} = useDataStore((state) => ({
 		configurations: state.configurations,
 		fetchConfigurations: state.fetchConfigurations,
+		fetchMerchantSettings: state.fetchMerchantSettings,
 		setNotification: state.setNotification,
 		fetchTransactions: state.fetchTransactions,
 		fetchDashboardStats: state.fetchDashboardStats,
@@ -43,9 +45,12 @@ const UploadModal = () => {
 	}));
 
 	useEffect(() => {
+		if (!uploadModalVisible && !uploadModalAnimating) return;
+
 		if (configurations === null) fetchConfigurations();
+		if (merchantSettings === null) fetchMerchantSettings();
 		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, []);
+	}, [uploadModalVisible, uploadModalAnimating, configurations, merchantSettings]);
 
 	const onStageFile = (event) => {
 		const stagedFileNames = stagedFiles.map((stagedFile) => stagedFile.file.name); // Existing staged files

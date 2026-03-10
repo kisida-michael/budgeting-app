@@ -1,47 +1,16 @@
-import supabase from "../config/supabaseClient";
+import { ApiError, apiRequest } from "../config/apiClient";
 import { getCategoricalSpending } from "./statsUtil";
 import { ignoredCategories } from "../constants/Categories";
 
-const transactionsTableName = import.meta.env.DEV ? "transactions_dev" : "transactions";
-const budgetsTableName = import.meta.env.DEV ? "budgets_dev" : "budgets";
-const uploadsTableName = import.meta.env.DEV ? "uploads_dev" : "uploads";
-
-export const getTransactions = async () => {
-	let { data, error } = await supabase.from(transactionsTableName).select("*");
-	if (error) {
-		alert("Error retrieving transactions:" + error.message);
-		return [];
-	}
-
-	if (data.length === 100000) {
-		alert("Max transaction limit reached.");
-	}
-
-	return formatTransactions(data);
-};
-
-export const getTransactionCount = async () => {
-	const { count } = await supabase.from(transactionsTableName).select("*", { count: "exact", head: true });
-	return count;
-};
-
-export const getTransactionsByMonth = async (dateObj) => {
-	let { data, error } = await supabase
-		.from(transactionsTableName)
-		.select("*")
-		.eq("month", dateObj.getMonth() + 1)
-		.eq("year", dateObj.getFullYear());
-	if (error) {
-		alert("Could not fetch dashboard statistics");
-		return [];
-	}
-
-	return formatTransactions(data);
+const isUnauthorized = (error) => error instanceof ApiError && error.status === 401;
+const logReadFailure = (label, error) => {
+	console.error(`${label}:`, error);
 };
 
 const formatTransactions = (transactions) => {
 	transactions = transactions.map((transaction) => {
 		transaction.date = new Date(transaction.date).toLocaleDateString("en-US");
+		transaction.amount = Number(transaction.amount);
 		return transaction;
 	});
 
@@ -57,104 +26,188 @@ const formatTransactions = (transactions) => {
 	return transactions;
 };
 
+export const getTransactions = async () => {
+	try {
+		const data = await apiRequest("/api/transactions");
+		if (data.length === 100000) {
+			alert("Max transaction limit reached.");
+		}
+		return formatTransactions(data);
+	} catch (error) {
+		if (!isUnauthorized(error)) logReadFailure("Could not fetch transactions", error);
+		return [];
+	}
+};
+
+export const getTransactionCount = async () => {
+	try {
+		const { count } = await apiRequest("/api/transactions/count");
+		return count;
+	} catch (error) {
+		if (isUnauthorized(error)) return 0;
+		throw error;
+	}
+};
+
+export const getTransactionsByMonth = async (dateObj) => {
+	try {
+		const data = await apiRequest(
+			`/api/transactions/month?month=${dateObj.getMonth() + 1}&year=${dateObj.getFullYear()}`
+		);
+		return formatTransactions(data);
+	} catch (error) {
+		if (!isUnauthorized(error)) logReadFailure("Could not fetch dashboard statistics", error);
+		return [];
+	}
+};
+
 export const insertTransactions = async (transactions) => {
-	const { error } = await supabase.from(transactionsTableName).insert(transactions);
-	if (error) throw error;
+	await apiRequest("/api/transactions/import", {
+		method: "POST",
+		body: JSON.stringify({ transactions }),
+	});
 };
 
 export const setTransactionIgnored = async (transactionId, ignored) => {
-	const { error } = await supabase.from(transactionsTableName).update({ ignored }).eq("id", transactionId);
-	if (error) return false;
-	return true;
+	try {
+		await apiRequest(`/api/transactions/${transactionId}/ignored`, {
+			method: "PATCH",
+			body: JSON.stringify({ ignored }),
+		});
+		return true;
+	} catch {
+		return false;
+	}
 };
 
 export const setTransactionsIgnored = async (transactions, ignored) => {
-	const payload = transactions.map((t) => {
-		return {
-			amount: t.amount,
-			categoryName: t.categoryName,
-			configurationName: t.configurationName,
-			date: t.date,
-			day: t.day,
-			id: t.id,
-			ignored,
-			merchant: t.merchant,
-			month: t.month,
-			userId: t.userId,
-			year: t.year,
-		};
-	});
-	const { error } = await supabase.from(transactionsTableName).upsert(payload);
-	if (error) return false;
-	return true;
+	try {
+		await apiRequest("/api/transactions/bulk/ignored", {
+			method: "PATCH",
+			body: JSON.stringify({
+				ids: transactions.map((transaction) => transaction.id),
+				ignored,
+			}),
+		});
+		return true;
+	} catch {
+		return false;
+	}
 };
 
 export const setTransactionCategory = async (transactionId, categoryName) => {
-	const { error } = await supabase.from(transactionsTableName).update({ categoryName }).eq("id", transactionId);
-	if (error) return false;
-	return true;
+	try {
+		await apiRequest(`/api/transactions/${transactionId}/category`, {
+			method: "PATCH",
+			body: JSON.stringify({ categoryName }),
+		});
+		return true;
+	} catch {
+		return false;
+	}
 };
 
 export const setTransactionCategories = async (transactions, categoryName) => {
-	const payload = transactions.map((t) => {
-		return {
-			amount: t.amount,
-			categoryName,
-			configurationName: t.configurationName,
-			date: t.date,
-			day: t.day,
-			id: t.id,
-			ignored: t.ignored,
-			merchant: t.merchant,
-			month: t.month,
-			userId: t.userId,
-			year: t.year,
-		};
-	});
-	const { error } = await supabase.from(transactionsTableName).upsert(payload);
-	if (error) return false;
-	return true;
+	try {
+		await apiRequest("/api/transactions/bulk/category", {
+			method: "PATCH",
+			body: JSON.stringify({
+				ids: transactions.map((transaction) => transaction.id),
+				categoryName,
+			}),
+		});
+		return true;
+	} catch {
+		return false;
+	}
 };
 
 export const updateTransactions = async (transactions) => {
-	let { error } = await supabase.from(transactionsTableName).upsert(transactions);
-	if (error) return false;
-	return true;
+	try {
+		await apiRequest("/api/transactions", {
+			method: "PUT",
+			body: JSON.stringify({
+				transactions: transactions.map((transaction) => ({
+					id: transaction.id,
+					categoryName: transaction.categoryName,
+					ignored: transaction.ignored,
+				})),
+			}),
+		});
+		return true;
+	} catch {
+		return false;
+	}
 };
 
 export const deleteTransaction = async (transactionId) => {
-	const { error } = await supabase.from(transactionsTableName).delete().eq("id", transactionId);
-	if (error) return false;
-	return true;
+	try {
+		await apiRequest(`/api/transactions/${transactionId}`, {
+			method: "DELETE",
+		});
+		return true;
+	} catch {
+		return false;
+	}
 };
 
 export const deleteTransactions = async (transactions) => {
-	const transactionIds = transactions.map((transaction) => transaction.id);
-	const { error } = await supabase.from(transactionsTableName).delete().in("id", transactionIds);
-	if (error) return false;
-	return true;
+	try {
+		await apiRequest("/api/transactions/bulk-delete", {
+			method: "POST",
+			body: JSON.stringify({
+				ids: transactions.map((transaction) => transaction.id),
+			}),
+		});
+		return true;
+	} catch {
+		return false;
+	}
 };
 
 export const getConfigurations = async () => {
-	let { data, error } = await supabase.from("configurations").select("*");
-	if (error) {
-		alert("Could not fetch configurations");
+	try {
+		const data = await apiRequest("/api/configurations");
+		data.sort((a, b) => a.name.localeCompare(b.name));
+		return data;
+	} catch (error) {
+		if (!isUnauthorized(error)) logReadFailure("Could not fetch configurations", error);
 		return [];
 	}
+};
 
-	data.sort((a, b) => a.name.localeCompare(b.name));
-	return data;
+export const upsertConfiguration = async (configuration) => {
+	try {
+		await apiRequest("/api/configurations", {
+			method: "POST",
+			body: JSON.stringify({ configuration }),
+		});
+		return true;
+	} catch {
+		return false;
+	}
+};
+
+export const deleteConfiguration = async (configurationName) => {
+	try {
+		await apiRequest(`/api/configurations/${encodeURIComponent(configurationName)}`, {
+			method: "DELETE",
+		});
+		return true;
+	} catch {
+		return false;
+	}
 };
 
 export const getCategories = async () => {
-	let { data, error } = await supabase.from("categories").select("*");
-	if (error) {
-		alert("Could not fetch categories");
+	try {
+		const data = await apiRequest("/api/categories");
+		data.sort((a, b) => a.orderIndex - b.orderIndex);
+		return data;
+	} catch (error) {
+		if (!isUnauthorized(error)) logReadFailure("Could not fetch categories", error);
 		return [];
 	}
-
-	data.sort((a, b) => a.orderIndex - b.orderIndex);
-	return data;
 };
 
 export const getSpending = async (year) => {
@@ -164,7 +217,6 @@ export const getSpending = async (year) => {
 		const transactions = await getTransactionsByMonth(new Date(year, i, 1));
 		const categoricalSpending = await getCategoricalSpending(transactions);
 
-		// Compute totals
 		let total = 0;
 		Object.keys(categoricalSpending).forEach((categoryName) => {
 			if (!ignoredCategories.includes(categoryName)) total += categoricalSpending[categoryName];
@@ -173,58 +225,49 @@ export const getSpending = async (year) => {
 		});
 		categoricalSpending["Total"] = total;
 		yearTotals["Total"] += total;
-
-		// Flip the sign of income because it is treated as a negative for the normal transactions table
 		categoricalSpending["Income"] *= -1;
-
 		spending[i] = categoricalSpending;
 	}
 
-	yearTotals["Income"] *= -1; // Flip sign of income because it is normally treated as a negative
+	yearTotals["Income"] *= -1;
 	spending[12] = yearTotals;
-
 	return spending;
 };
 
 export const getBudgets = async (date) => {
-	let { data, error } = await supabase.from("categories").select("*, budgets(*)");
-	if (error) {
-		alert("Could not fetch budgets");
-		return [];
+	let budgetLimits = [];
+	try {
+		budgetLimits = await apiRequest("/api/budget-limits");
+	} catch (error) {
+		if (!isUnauthorized(error)) throw error;
 	}
-	const transactions = await getTransactionsByMonth(date);
+	const [categoriesData, transactions] = await Promise.all([getCategories(), getTransactionsByMonth(date)]);
 	const categoricalSpending = getCategoricalSpending(transactions);
 
 	let totalLimit = 0;
 	let totalSpending = 0;
-	let budgets = data.map((budget) => {
+	let budgets = categoriesData.map((budget) => {
 		const newBudget = { ...budget };
-		// Deconstruct the budget fields if one is returned
-		newBudget.limit = newBudget.budgets.length > 0 ? newBudget.budgets[0].limit : null;
+		const matchedBudget = budgetLimits.find((limitRow) => limitRow.categoryName === newBudget.name);
+		newBudget.limit = matchedBudget ? Number(matchedBudget.limit) : null;
 		newBudget.spending = categoricalSpending[newBudget.name] || 0;
 		newBudget.percentage = newBudget.limit ? (newBudget.spending / newBudget.limit) * 100 : null;
 
-		// Calculate the total limit and spending
 		if (!ignoredCategories.includes(newBudget.name)) {
 			if (newBudget.limit) totalLimit += newBudget.limit;
 			totalSpending += newBudget.spending;
 		}
 
-		// Remove the budgets fields after deconstructing
-		delete newBudget.budgets;
 		return newBudget;
 	});
 
-	// Sort the budgets by the orderIndex that is returned as part of the category table
 	budgets.sort((a, b) => a.orderIndex - b.orderIndex);
 
-	// Add the "total" to the list
 	const totalBudget = {
 		name: "Total",
 		limit: totalLimit > 0 ? totalLimit : null,
 		spending: totalSpending,
 		percentage: totalLimit > 0 ? (totalSpending / totalLimit) * 100 : null,
-		// color: "rgb(241 245 249)",
 		color: "white",
 		colorDark: "rgb(226 232 240)",
 		colorLight: "rgb(248 250 252)",
@@ -234,83 +277,91 @@ export const getBudgets = async (date) => {
 	return budgets;
 };
 
-export const updateBudget = async (newBudgets, userId) => {
-	const updates = [];
-	const deletes = [];
-
-	newBudgets.forEach((budget) => {
-		if (budget.name === "Total") return;
-
-		if (budget.limit) {
-			updates.push({ categoryName: budget.name, limit: budget.limit, userId });
-		} else {
-			deletes.push(budget.name);
-		}
-	});
-
-	if (updates.length > 0) {
-		const { error } = await supabase.from(budgetsTableName).upsert(updates);
-		if (error) return false;
+export const updateBudget = async (newBudgets) => {
+	try {
+		await apiRequest("/api/budgets", {
+			method: "PUT",
+			body: JSON.stringify({
+				budgets: newBudgets
+					.filter((budget) => budget.name !== "Total")
+					.map((budget) => ({
+						categoryName: budget.name,
+						limit: budget.limit === "" ? null : budget.limit,
+					})),
+			}),
+		});
+		return true;
+	} catch {
+		return false;
 	}
-
-	if (deletes.length > 0) {
-		const { error } = await supabase
-			.from(budgetsTableName)
-			.delete()
-			.in("categoryName", deletes)
-			.eq("userId", userId);
-		if (error) return false;
-	}
-	return true;
 };
 
 export const getMerchantSettings = async () => {
-	let { data, error } = await supabase.from("merchants").select("*, category:categories(*)");
-	if (error) {
-		alert("Could not fetch merchant settings");
+	try {
+		const data = await apiRequest("/api/merchants");
+		data.sort((a, b) => a.id - b.id);
+		return data;
+	} catch (error) {
+		if (!isUnauthorized(error)) logReadFailure("Could not fetch merchant settings", error);
 		return [];
 	}
-
-	data = data.map((merchantSetting) => {
-		delete merchantSetting.categoryName;
-		return merchantSetting;
-	});
-
-	data.sort((a, b) => a.id - b.id);
-
-	return data;
 };
 
 export const upsertMerchantSetting = async (merchantSetting) => {
-	const { error } = await supabase.from("merchants").upsert(merchantSetting);
-	if (error) return false;
-	return true;
+	try {
+		await apiRequest("/api/merchants", {
+			method: "POST",
+			body: JSON.stringify({ merchantSetting }),
+		});
+		return true;
+	} catch {
+		return false;
+	}
 };
 
 export const deleteMerchantSetting = async (merchantSettingId) => {
-	const { error } = await supabase.from("merchants").delete().eq("id", merchantSettingId);
-	if (error) return false;
-	return true;
+	try {
+		await apiRequest(`/api/merchants/${merchantSettingId}`, {
+			method: "DELETE",
+		});
+		return true;
+	} catch {
+		return false;
+	}
 };
 
 export const getUploads = async () => {
-	const { data, error } = await supabase.from(uploadsTableName).select("*");
-	if (error) {
-		alert("Could not fetch uploads");
+	try {
+		const uploads = await apiRequest("/api/uploads");
+		return uploads.map((upload) => ({
+			...upload,
+			created_at: upload.createdAt,
+		}));
+	} catch (error) {
+		if (!isUnauthorized(error)) logReadFailure("Could not fetch uploads", error);
 		return [];
 	}
-	return data;
 };
 
-export const createUpload = async (userId, uploadId, files, transactionsUploaded) => {
-	const { error } = await supabase
-		.from(uploadsTableName)
-		.insert({ id: uploadId, userId, files, transactionsUploaded });
-	if (error) throw Error("Could not upload transactions. Please try again later.");
+export const createUpload = async (_userId, uploadId, files, transactionsUploaded) => {
+	await apiRequest("/api/uploads", {
+		method: "POST",
+		body: JSON.stringify({
+			upload: {
+				id: uploadId,
+				files,
+				transactionsUploaded,
+			},
+		}),
+	});
 };
 
-// This will CASCADE delete the any transactions that reference this upload
 export const deleteUpload = async (uploadId) => {
-	const { error } = await supabase.from(uploadsTableName).delete().eq("id", uploadId);
-	if (error) throw Error(error.message);
+	try {
+		await apiRequest(`/api/uploads/${uploadId}`, {
+			method: "DELETE",
+		});
+	} catch (error) {
+		throw Error(error.message);
+	}
 };

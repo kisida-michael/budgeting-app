@@ -42,20 +42,12 @@ const App = () => {
 		transactionsLoading,
 		categories,
 		fetchCategories,
-		merchantSettings,
-		fetchMerchantSettings,
-		uploads,
-		fetchUploads,
 	} = useDataStore((state) => ({
 		transactions: state.transactions,
 		fetchTransactions: state.fetchTransactions,
 		transactionsLoading: state.transactionsLoading,
 		categories: state.categories,
 		fetchCategories: state.fetchCategories,
-		merchantSettings: state.merchantSettings,
-		fetchMerchantSettings: state.fetchMerchantSettings,
-		uploads: state.uploads,
-		fetchUploads: state.fetchUploads,
 	}));
 	const [loading, setLoading] = useState(true);
 
@@ -79,8 +71,6 @@ const App = () => {
 		if (!error) setSession(data.session);
 
 		setLoading(false);
-
-		if (totalTransactionCount == -1) await fetchTotalTransactionCount();
 	};
 
 	useEffect(() => {
@@ -130,17 +120,19 @@ const App = () => {
 		}
 	};
 
-	const updateDataStore = () => {
+	const updateDataStore = async () => {
+		if (!session) return;
+
+		if (totalTransactionCount == -1) await fetchTotalTransactionCount();
 		if (transactions === null && !transactionsLoading) fetchTransactions(); // This will trigger load dashboard stats itself
 		if (categories === null) fetchCategories();
-		if (merchantSettings === null) fetchMerchantSettings();
-		if (uploads === null) fetchUploads();
 	};
 
 	useEffect(() => {
+		if (loading || !session) return;
 		updateDataStore();
 		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, []);
+	}, [loading, session]);
 
 	if (loading) return null;
 

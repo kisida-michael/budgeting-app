@@ -1,4 +1,10 @@
 .env
+.env.*
+!.env.example
+client/.env
+client/.env.*
+server/.env
+server/.env.*
 
 # Logs
 logs
@@ -13,6 +19,7 @@ node_modules
 dist
 dist-ssr
 *.local
+coverage
 
 # Editor directories and files
 .vscode/*

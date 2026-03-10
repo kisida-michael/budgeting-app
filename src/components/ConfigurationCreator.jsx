@@ -1,19 +1,18 @@
 import { useEffect, useState } from "react";
 import DisabledConfigurationOptions from "./DisabledConfigurationOptions";
 import ButtonSpinner from "./ButtonSpinner";
-import supabase from "../config/supabaseClient";
 import CSVColNumOption from "./CSVColNumOption";
 import CSVSymbolOption from "./CSVSymbolOption";
 import ErrorMessage from "./ErrorMessage";
 import { useDataStore } from "../util/dataStore";
+import { deleteConfiguration, upsertConfiguration } from "../util/supabaseQueries";
 
 const ConfigurationCreator = () => {
-	const { configurations, configurationsLoading, fetchConfigurations, session } = useDataStore((state) => ({
+	const { configurations, configurationsLoading, fetchConfigurations } = useDataStore((state) => ({
 		configurations: state.configurations,
 		setConfigurations: state.setConfigurations,
 		configurationsLoading: state.configurationsLoading,
 		fetchConfigurations: state.fetchConfigurations,
-		session: state.session,
 	}));
 	const [activeConfiguration, setActiveConfiguration] = useState(null);
 	const [newConfigurationName, setNewConfigurationName] = useState("");
@@ -86,8 +85,8 @@ const ConfigurationCreator = () => {
 			return;
 		}
 
-		const { error } = await supabase.from("configurations").delete().eq("name", activeConfiguration.name);
-		if (error) {
+		const success = await deleteConfiguration(activeConfiguration.name);
+		if (!success) {
 			setLoading({ ...loading, delete: false });
 			setSaveConfigurationErrors(["Could not delete configuration."]);
 			return;
@@ -139,11 +138,10 @@ const ConfigurationCreator = () => {
 			return;
 		}
 
-		const { error } = await supabase
-			.from("configurations")
-			.upsert({ ...activeConfiguration, userId: session.user.id });
-		if (error) {
+		const success = await upsertConfiguration(activeConfiguration);
+		if (!success) {
 			setSaveConfigurationErrors(["Could not save configuration."]);
+			setLoading({ ...loading, save: false });
 			return;
 		}
 
