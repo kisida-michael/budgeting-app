@@ -11,11 +11,12 @@ import Login from "./screens/Login";
 import supabase from "./config/supabaseClient";
 
 const App = () => {
-	const { session, setSession, totalTransactionCount, fetchTotalTransactionCount } = useDataStore((state) => ({
+	const { session, setSession, totalTransactionCount, fetchTotalTransactionCount, theme } = useDataStore((state) => ({
 		session: state.session,
 		setSession: state.setSession,
 		totalTransactionCount: state.totalTransactionCount,
 		fetchTotalTransactionCount: state.fetchTotalTransactionCount,
+		theme: state.theme,
 	}));
 	const {
 		filterMenuVisible,
@@ -86,6 +87,11 @@ const App = () => {
 	useEffect(() => {
 		loadData();
 	}, []);
+
+	useEffect(() => {
+		document.documentElement.classList.toggle("dark", theme === "dark");
+		document.body.classList.toggle("dark", theme === "dark");
+	}, [theme]);
 
 	window.onclick = (event) => {
 		const categoryMenuClassNames = [".category-button", ".category-menu"];

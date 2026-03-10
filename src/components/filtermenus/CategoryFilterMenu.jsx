@@ -1,14 +1,15 @@
 import PropTypes from "prop-types";
 import { useDataStore } from "../../util/dataStore";
-import { getDashboardStats } from "../../util/statsUtil";
+import { applyDashboardFilters } from "../../util/dashboardFilters";
 
 const CategoryFilterMenu = ({ setSelectedFilterOptions }) => {
-	const { transactions, filters, setFilters, setDashboardStats, categories } = useDataStore((state) => ({
+	const { transactions, filters, setFilters, setDashboardStats, categories, setActiveSavedView } = useDataStore((state) => ({
 		transactions: state.transactions,
 		filters: state.filters,
 		setFilters: state.setFilters,
 		setDashboardStats: state.setDashboardStats,
 		categories: state.categories,
+		setActiveSavedView: state.setActiveSavedView,
 	}));
 
 	return (
@@ -32,8 +33,14 @@ const CategoryFilterMenu = ({ setSelectedFilterOptions }) => {
 							return;
 						}
 						const newFilters = [...filters, { type: "Category", category: category }];
-						setFilters(newFilters);
-						setDashboardStats(await getDashboardStats(transactions, newFilters));
+						await applyDashboardFilters({
+							transactions,
+							filters: newFilters,
+							categories,
+							setFilters,
+							setDashboardStats,
+							setActiveSavedView,
+						});
 					}}
 				>
 					{category.name}

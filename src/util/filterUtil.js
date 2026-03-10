@@ -1,5 +1,5 @@
 export const filterTransactions = (transactions, filters) => {
-	const filterTypes = ["Date", "Merchant", "Category", "Configuration", "Amount"];
+	const filterTypes = ["Date", "Merchant", "Category", "Configuration", "Amount", "Search"];
 	let filteredTransactions = [...transactions];
 	filterTypes.forEach((filterType) => {
 		const matchingFilters = filters.filter((filter) => filter.type === filterType);
@@ -31,6 +31,20 @@ export const filterTransactions = (transactions, filters) => {
 							(filter.condition === "lessThan" && transactionAmount < filterAmount) ||
 							(filter.condition === "greaterThan" && transactionAmount > filterAmount) ||
 							(filter.condition === "equals" && transactionAmount === filterAmount);
+					} else if (filter.type === "Search") {
+						const query = filter.query.toLowerCase().trim();
+						const searchableText = [
+							transaction.merchant,
+							transaction.categoryName,
+							transaction.configurationName,
+							transaction.date,
+							transaction.amount?.toString(),
+						]
+							.filter(Boolean)
+							.join(" ")
+							.toLowerCase();
+
+						isMatchingTransaction = query.length === 0 || searchableText.includes(query);
 					}
 
 					if (

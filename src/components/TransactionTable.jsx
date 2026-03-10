@@ -1,10 +1,16 @@
-import { useState, useRef, useEffect, useLayoutEffect } from "react";
+import { useState, useRef, useEffect, useLayoutEffect, useMemo } from "react";
 import { useDataStore } from "../util/dataStore";
 import { useAnimationStore } from "../util/animationStore";
 import { filterTransactions } from "../util/filterUtil";
 import { sortTransactions } from "../util/sortUtil";
 import { getDashboardStats } from "../util/statsUtil";
 import { getTransactions, setTransactionCategory } from "../util/supabaseQueries";
+import { buildSavedViews } from "../constants/SavedViews";
+import {
+	applyDashboardFilters,
+	getSearchQuery,
+	withSearchQuery,
+} from "../util/dashboardFilters";
 import TransactionMenu from "./TransactionMenu";
 import PropTypes from "prop-types";
 import ButtonSpinner from "./ButtonSpinner";
@@ -24,6 +30,8 @@ const TransactionTable = ({ transactions, setTransactions, transactionsLoading }
 		setDashboardSortState,
 		filters,
 		setFilters,
+		activeSavedView,
+		setActiveSavedView,
 		fetchBudgets,
 	} = useDataStore((state) => ({
 		categories: state.categories,
@@ -35,6 +43,8 @@ const TransactionTable = ({ transactions, setTransactions, transactionsLoading }
 		totalTransactionCount: state.totalTransactionCount,
 		filters: state.filters,
 		setFilters: state.setFilters,
+		activeSavedView: state.activeSavedView,
+		setActiveSavedView: state.setActiveSavedView,
 		fetchBudgets: state.fetchBudgets,
 	}));
 	const { openUploadModal, closeCategoryMenu } = useAnimationStore((state) => ({
@@ -44,11 +54,13 @@ const TransactionTable = ({ transactions, setTransactions, transactionsLoading }
 	const [categoryUpdateLoading, setCategoryUpdateLoading] = useState(false);
 	const [showFilters, setShowFilters] = useState(false);
 	const [localTransactions, setLocalTransactions] = useState(transactions);
+	const [searchInput, setSearchInput] = useState(getSearchQuery(filters));
 	const tableRef = useRef(null);
 	const filtersRef = useRef(null);
 
 	const [page, setPage] = useState(0);
 	const pageSize = 20;
+	const savedViews = useMemo(() => buildSavedViews(categories ?? []), [categories]);
 
 	useEffect(() => {
 		return async () => {
@@ -66,6 +78,45 @@ const TransactionTable = ({ transactions, setTransactions, transactionsLoading }
 			setLocalTransactions(newTransactions);
 		}
 	}, [filters, dashboardSortState, transactions]);
+
+	useEffect(() => {
+		setSearchInput(getSearchQuery(filters));
+	}, [filters]);
+
+	useEffect(() => {
+		if (!transactions) {
+			return undefined;
+		}
+
+		const currentQuery = getSearchQuery(filters);
+		if (searchInput === currentQuery) {
+			return undefined;
+		}
+
+		const timeoutId = window.setTimeout(async () => {
+			const nextFilters = withSearchQuery(filters, searchInput);
+			await applyDashboardFilters({
+				transactions,
+				filters: nextFilters,
+				categories,
+				setFilters,
+				setDashboardStats,
+				setActiveSavedView,
+			});
+		}, 200);
+
+		return () => {
+			window.clearTimeout(timeoutId);
+		};
+	}, [
+		categories,
+		filters,
+		searchInput,
+		setActiveSavedView,
+		setDashboardStats,
+		setFilters,
+		transactions,
+	]);
 
 	// Whenever a filter is applied, reset to the first page
 	useEffect(() => {
@@ -118,10 +169,27 @@ const TransactionTable = ({ transactions, setTransactions, transactionsLoading }
 		setDashboardSortState(newDashboardSortState);
 	};
 
+	const applySavedView = async (savedView) => {
+		if (!transactions) {
+			return;
+		}
+
+		const nextFilters = withSearchQuery(savedView.buildFilters(), searchInput);
+		await applyDashboardFilters({
+			transactions,
+			filters: nextFilters,
+			categories,
+			setFilters,
+			setDashboardStats,
+			setActiveSavedView,
+		});
+	};
+
 	return (
 		<div ref={tableRef} className="w-full grow flex flex-col bg-white border border-slate-300 rounded-2xl">
-			<div className="flex items-center justify-between px-5 py-3">
-				<div className="flex gap-2">
+			<div className="flex flex-col gap-3 px-5 py-3 border-b border-slate-200">
+				<div className="flex items-center justify-between gap-3">
+					<div className="flex gap-2">
 					{localTransactions?.some((t) => t.selected) && (
 						<>
 							<button
@@ -142,25 +210,51 @@ const TransactionTable = ({ transactions, setTransactions, transactionsLoading }
 							<div className="w-[2px] bg-gray-300"></div>
 						</>
 					)}
-					<span className="text-lg text-slate-600 font-semibold flex justify-start items-center">
-						Transactions
-					</span>
+						<span className="text-lg text-slate-600 font-semibold flex justify-start items-center">
+							Transactions
+						</span>
+					</div>
+					<div className="flex gap-2">
+						<button
+							onClick={() => {
+								setShowFilters(!showFilters);
+							}}
+							className="border-slate-200 text-slate-500 hover:bg-slate-50 text-sm font-normal px-2 py-1 border-slate-300 border rounded"
+						>
+							{showFilters ? "Hide Filters" : "Show Filters"}
+						</button>
+						<button
+							onClick={openUploadModal}
+							className="relative font-normal text-slate-600 bg-cGreen-light hover:bg-cGreen-lightHover border border-slate-300 rounded text-sm py-1 px-3"
+						>
+							Upload
+						</button>
+					</div>
 				</div>
-				<div className="flex gap-2">
-					<button
-						onClick={() => {
-							setShowFilters(!showFilters);
-						}}
-						className="border-slate-200 text-slate-500 hover:bg-slate-50 text-sm font-normal px-2 py-1 border-slate-300 border rounded"
-					>
-						{showFilters ? "Hide Filters" : "Show Filters"}
-					</button>
-					<button
-						onClick={openUploadModal}
-						className="relative font-normal text-slate-600 bg-cGreen-light hover:bg-cGreen-lightHover border border-slate-300 rounded text-sm py-1 px-3"
-					>
-						Upload
-					</button>
+				<div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+					<div className="flex items-center gap-2 flex-wrap">
+						{savedViews.map((savedView) => (
+							<button
+								key={savedView.key}
+								onClick={() => applySavedView(savedView)}
+								className={`rounded-full border px-3 py-1 text-sm ${
+									activeSavedView === savedView.key
+										? "border-cGreen bg-cGreen-light text-slate-700"
+										: "border-slate-200 text-slate-500 hover:bg-slate-50"
+								}`}
+							>
+								{savedView.label}
+							</button>
+						))}
+					</div>
+					<div className="w-full lg:max-w-sm">
+						<input
+							value={searchInput}
+							onChange={(e) => setSearchInput(e.target.value)}
+							placeholder="Search merchant, category, config, date, amount"
+							className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-slate-400"
+						/>
+					</div>
 				</div>
 			</div>
 			<div
@@ -180,6 +274,7 @@ const TransactionTable = ({ transactions, setTransactions, transactionsLoading }
 										<span>{`${filter.start.month}/${filter.start.day}/${filter.start.year} to ${filter.end.month}/${filter.end.day}/${filter.end.year}`}</span>
 									)}
 									{filter.type === "Merchant" && <span>{filter.merchant}</span>}
+									{filter.type === "Search" && <span>{filter.query}</span>}
 									{filter.type === "Category" && (
 										<span
 											className="text-slate-600 px-1.5 rounded"
@@ -200,8 +295,14 @@ const TransactionTable = ({ transactions, setTransactions, transactionsLoading }
 										onClick={async () => {
 											const newFilters = [...filters];
 											newFilters.splice(index, 1);
-											setFilters(newFilters);
-											setDashboardStats(await getDashboardStats(transactions, newFilters));
+											await applyDashboardFilters({
+												transactions,
+												filters: newFilters,
+												categories,
+												setFilters,
+												setDashboardStats,
+												setActiveSavedView,
+											});
 										}}
 										className="hover:bg-slate-100 h-full"
 									>
@@ -328,6 +429,12 @@ const TransactionTable = ({ transactions, setTransactions, transactionsLoading }
 					{transactionsLoading && (
 						<div className="flex relative justify-center text-sm text-slate-300 items-center p-5 opacity-80">
 							<ButtonSpinner />
+						</div>
+					)}
+
+					{!transactionsLoading && localTransactions?.length === 0 && (
+						<div className="flex grow items-center justify-center px-5 py-12 text-sm text-slate-500">
+							No transactions match the current filters.
 						</div>
 					)}
 				</div>

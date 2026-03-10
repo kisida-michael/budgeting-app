@@ -1,7 +1,9 @@
 import { useState, useRef } from "react";
 import { useDataStore } from "../util/dataStore";
-import { defaultFilter } from "../constants/Filters";
+import { buildDefaultDateFilter } from "../constants/Filters";
 import DashboardStatsCategory from "./DashboardStatsCategory";
+
+const getDefaultStatsFilter = () => JSON.stringify([buildDefaultDateFilter()]);
 
 const DashboardStats = () => {
 	const { dashboardStats, dashboardStatsLoading } = useDataStore((state) => ({
@@ -23,7 +25,7 @@ const DashboardStats = () => {
 						{/* {SPENDING FOR NORMAL CATEGORIES} */}
 						{dashboardStats.specialCaseCategory === false && (
 							<>
-								{JSON.stringify(dashboardStats.filters) === JSON.stringify([{ ...defaultFilter }]) ? (
+								{JSON.stringify(dashboardStats.filters) === getDefaultStatsFilter() ? (
 									<>
 										<div className="text-sm text-slate-700 font-semibold">
 											{dashboardStats?.spending?.title}
@@ -108,7 +110,7 @@ const DashboardStats = () => {
 							{/* TOP CATEGORIES LABEL */}
 							<span>
 								Categorical Spending
-								{JSON.stringify(dashboardStats.filters) !== JSON.stringify([{ ...defaultFilter }]) && (
+								{JSON.stringify(dashboardStats.filters) !== getDefaultStatsFilter() && (
 									<span className="text-xs text-slate-500 font-normal italic">{" (filtered)"}</span>
 								)}
 							</span>

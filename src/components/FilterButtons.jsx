@@ -2,8 +2,8 @@ import { useState } from "react";
 import { useAnimationStore } from "../util/animationStore";
 import { useDataStore } from "../util/dataStore";
 import { daysByMonth } from "../constants/Dates";
-import { defaultFilter } from "../constants/Filters";
-import { getDashboardStats } from "../util/statsUtil";
+import { buildDefaultDateFilter } from "../constants/Filters";
+import { applyDashboardFilters } from "../util/dashboardFilters";
 import DateFilterMenu from "./filtermenus/DateFilterMenu";
 import AmountFilterMenu from "./filtermenus/AmountFilterMenu";
 import MerchantFilterMenu from "./filtermenus/MerchantFilterMenu";
@@ -17,11 +17,13 @@ const FilterButtons = () => {
 		openFilterMenu: state.openFilterMenu,
 		closeFilterMenu: state.closeFilterMenu,
 	}));
-	const { transactions, filters, setFilters, setDashboardStats } = useDataStore((state) => ({
+	const { transactions, filters, setFilters, setDashboardStats, categories, setActiveSavedView } = useDataStore((state) => ({
 		transactions: state.transactions,
 		filters: state.filters,
 		setFilters: state.setFilters,
 		setDashboardStats: state.setDashboardStats,
+		categories: state.categories,
+		setActiveSavedView: state.setActiveSavedView,
 	}));
 	const [selectedFilterOptions, setSelectedFilterOptions] = useState(null);
 
@@ -82,10 +84,17 @@ const FilterButtons = () => {
 	};
 
 	const resetFilters = async () => {
-		if (JSON.stringify(filters) === JSON.stringify([defaultFilter])) return;
+		const defaultFilters = [buildDefaultDateFilter()];
+		if (JSON.stringify(filters) === JSON.stringify(defaultFilters)) return;
 
-		setFilters([defaultFilter]);
-		setDashboardStats(await getDashboardStats(transactions, [defaultFilter]));
+		await applyDashboardFilters({
+			transactions,
+			filters: defaultFilters,
+			categories,
+			setFilters,
+			setDashboardStats,
+			setActiveSavedView,
+		});
 	};
 
 	return (

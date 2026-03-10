@@ -50,7 +50,18 @@ type AmountFilter = {
   condition: "lessThan" | "greaterThan" | "equals";
 };
 
-type ClientFilter = DateFilter | MerchantFilter | CategoryFilter | ConfigurationFilter | AmountFilter;
+type SearchFilter = {
+  type: "Search";
+  query: string;
+};
+
+type ClientFilter =
+  | DateFilter
+  | MerchantFilter
+  | CategoryFilter
+  | ConfigurationFilter
+  | AmountFilter
+  | SearchFilter;
 
 export type TransactionView = {
   id?: number;
@@ -250,7 +261,7 @@ function handleSpecialCaseCategoryFilter(
 }
 
 function filterTransactions(transactionRows: TransactionView[], filters: ClientFilter[]) {
-  const filterTypes = ["Date", "Merchant", "Category", "Configuration", "Amount"];
+  const filterTypes = ["Date", "Merchant", "Category", "Configuration", "Amount", "Search"] as const;
   let filteredTransactions = [...transactionRows];
 
   filterTypes.forEach((filterType) => {
@@ -283,6 +294,20 @@ function filterTransactions(transactionRows: TransactionView[], filters: ClientF
               (filter.condition === "lessThan" && transactionAmount < filterAmount) ||
               (filter.condition === "greaterThan" && transactionAmount > filterAmount) ||
               (filter.condition === "equals" && transactionAmount === filterAmount);
+          } else if (filter.type === "Search") {
+            const query = filter.query.toLowerCase().trim();
+            const searchableText = [
+              transaction.merchant,
+              transaction.categoryName,
+              transaction.configurationName,
+              transaction.date,
+              String(transaction.amount)
+            ]
+              .filter(Boolean)
+              .join(" ")
+              .toLowerCase();
+
+            isMatchingTransaction = query.length === 0 || searchableText.includes(query);
           }
 
           if (

@@ -1,14 +1,16 @@
 import PropTypes from "prop-types";
 import { daysByMonth } from "../../constants/Dates";
 import { useDataStore } from "../../util/dataStore";
-import { getDashboardStats } from "../../util/statsUtil";
+import { applyDashboardFilters } from "../../util/dashboardFilters";
 
 const DateFilterMenu = ({ selectedFilterOptions, setSelectedFilterOptions }) => {
-	const { transactions, filters, setFilters, setDashboardStats } = useDataStore((state) => ({
+	const { transactions, filters, setFilters, setDashboardStats, categories, setActiveSavedView } = useDataStore((state) => ({
 		transactions: state.transactions,
 		filters: state.filters,
 		setFilters: state.setFilters,
 		setDashboardStats: state.setDashboardStats,
+		categories: state.categories,
+		setActiveSavedView: state.setActiveSavedView,
 	}));
 
 	return (
@@ -153,8 +155,14 @@ const DateFilterMenu = ({ selectedFilterOptions, setSelectedFilterOptions }) => 
 						return;
 					}
 					const newFilters = [...filters, tempSelectedFilterOptions];
-					setFilters([...filters, tempSelectedFilterOptions]);
-					setDashboardStats(await getDashboardStats(transactions, newFilters));
+					await applyDashboardFilters({
+						transactions,
+						filters: newFilters,
+						categories,
+						setFilters,
+						setDashboardStats,
+						setActiveSavedView,
+					});
 				}}
 				className="add-filter-option text-xs hover:bg-slate-50 border border-slate-200 rounded w-full py-0.5"
 			>

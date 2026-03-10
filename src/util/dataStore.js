@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { getDashboardStats } from "./statsUtil";
-import { defaultFilter } from "../constants/Filters";
+import { buildDefaultDateFilter } from "../constants/Filters";
 import {
 	getTransactions,
 	getConfigurations,
@@ -33,10 +33,12 @@ const store = (set, get) => ({
 		if (dashboardStats === null) fetchDashboardStats();
 	},
 
-	filters: [{ ...defaultFilter }],
+	filters: [buildDefaultDateFilter()],
 	setFilters: (filters) => {
 		set(() => ({ filters }));
 	},
+	activeSavedView: "this-month",
+	setActiveSavedView: (activeSavedView) => set(() => ({ activeSavedView })),
 
 	configurations: null,
 	setConfigurations: (configurations) => set(() => ({ configurations })),
@@ -58,6 +60,19 @@ const store = (set, get) => ({
 
 	notification: null,
 	setNotification: (notification) => set(() => ({ notification })),
+
+	theme: typeof window !== "undefined" ? localStorage.getItem("budget-theme") ?? "light" : "light",
+	setTheme: (theme) => {
+		if (typeof window !== "undefined") {
+			localStorage.setItem("budget-theme", theme);
+		}
+
+		set(() => ({ theme }));
+	},
+	toggleTheme: () => {
+		const { theme, setTheme } = get();
+		setTheme(theme === "dark" ? "light" : "dark");
+	},
 
 	session: null,
 	setSession: (session) => set(() => ({ session })),

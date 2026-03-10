@@ -1,9 +1,10 @@
 # Budget Rewrite
 
 ## Current Task
-- [x] Fix Plaid production `link/token/create` handling so production config errors surface as JSON instead of HTML stack traces.
-- [x] Add Plaid production OAuth config support for web redirect URIs.
-- [x] Document the Plaid production requirements and verify the server/frontend build after the patch.
+- [x] Add app-level dark mode with persistent theme preference.
+- [x] Add transaction search and saved views on top of the existing filter model.
+- [x] Add a dashboard needs-attention panel for uncategorized, over-budget, and Plaid sync/account states.
+- [x] Keep the first-wave changes additive to the preserved UI structure and verify with lint, typecheck, and build.
 
 ## Active Plan
 - [x] Clone the original source repository into this project root.
@@ -71,3 +72,9 @@
 - Added optional `PLAID_REDIRECT_URI` support to `link/token/create` for production web OAuth flows and changed Plaid route error handling to return upstream JSON error details instead of Express HTML error pages.
 - Documented the production Plaid requirement in `.env.example`, `README.md`, and `tasks/lessons.md`.
 - Verified the Plaid production handling pass with `npm run lint`, `npm run typecheck`, and `npm run build`.
+- Added `roadmap.md` to prioritize requested frontend work into phased delivery, with explicit Plaid cost constraints and dark mode included in the first implementation wave.
+- Added persistent dark mode state to the preserved UI store, applied the theme class at the app root, and exposed a theme toggle in the existing sidebar.
+- Added transaction saved-view presets plus a free-text search filter that can stack on top of saved views and manual filters without changing the preserved table layout.
+- Added a dashboard `Needs Attention` panel for uncategorized current-month transactions, over-budget categories, and Plaid connection/sync health.
+- Centralized dashboard filter application so search, saved views, chip removal, and reset all keep dashboard stats and saved-view state in sync.
+- Verified the first-wave frontend pass with `npm run lint`, `npm run typecheck`, and `npm run build`.

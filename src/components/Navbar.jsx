@@ -4,8 +4,10 @@ import supabase from "../config/supabaseClient";
 import { useDataStore } from "../util/dataStore";
 
 const Navbar = ({ activePage }) => {
-	const { setNotification } = useDataStore((state) => ({
+	const { setNotification, theme, toggleTheme } = useDataStore((state) => ({
 		setNotification: state.setNotification,
+		theme: state.theme,
+		toggleTheme: state.toggleTheme,
 	}));
 
 	const handleLogout = async () => {
@@ -53,6 +55,15 @@ const Navbar = ({ activePage }) => {
 				/>
 			</div>
 			<div className="border-t border-slate-300 px-6 pb-10 pt-5">
+				<button
+					onClick={toggleTheme}
+					className="bg-white hover:cursor-pointer hover:bg-slate-50 border border-slate-100 w-full flex items-center gap-3.5 py-3 px-4 rounded-lg mb-3"
+				>
+					<div className="w-7 h-7 flex items-center justify-center text-lg">
+						{theme === "dark" ? "☀" : "☾"}
+					</div>
+					<div className="text-slate-500 text-sm">{theme === "dark" ? "Light Mode" : "Dark Mode"}</div>
+				</button>
 				<button
 					onClick={handleLogout}
 					className="bg-white hover:cursor-pointer hover:bg-slate-50 border border-slate-100 w-full flex items-center gap-3.5 py-3 px-4 rounded-lg"

@@ -14,6 +14,81 @@ body {
 	@apply lg:text-sm;
 }
 
+html,
+body,
+#root {
+	min-height: 100%;
+}
+
+body {
+	transition:
+		background-color 0.2s ease,
+		color 0.2s ease;
+}
+
+.dark body {
+	background-color: rgb(2 6 23);
+	color: rgb(226 232 240);
+}
+
+.dark .bg-white {
+	background-color: rgb(15 23 42) !important;
+}
+
+.dark .bg-slate-100,
+.dark .bg-gray-100 {
+	background-color: rgb(2 6 23) !important;
+}
+
+.dark .bg-slate-50,
+.dark .bg-gray-50 {
+	background-color: rgb(15 23 42 / 0.75) !important;
+}
+
+.dark .border-slate-300,
+.dark .border-slate-200,
+.dark .border-slate-100,
+.dark .bg-slate-300 {
+	border-color: rgb(51 65 85) !important;
+}
+
+.dark .text-slate-700 {
+	color: rgb(241 245 249) !important;
+}
+
+.dark .text-slate-600 {
+	color: rgb(226 232 240) !important;
+}
+
+.dark .text-slate-500,
+.dark .text-slate-400,
+.dark .text-slate-300 {
+	color: rgb(148 163 184) !important;
+}
+
+.dark input[type="text"],
+.dark input[type="email"],
+.dark input[type="password"],
+.dark select,
+.dark textarea {
+	background-color: rgb(15 23 42);
+	color: rgb(226 232 240);
+	border-color: rgb(71 85 105);
+}
+
+.dark input::placeholder,
+.dark textarea::placeholder {
+	color: rgb(148 163 184);
+}
+
+.dark [type="checkbox"] {
+	background-color: rgb(15 23 42);
+}
+
+.dark [type="checkbox"]::before {
+	box-shadow: inset 0 0 0 1px rgb(71 85 105);
+}
+
 .no-scrollbar::-webkit-scrollbar {
 	display: none;
 }
