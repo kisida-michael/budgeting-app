@@ -1,6 +1,4 @@
 import { ApiError, apiRequest } from "../config/apiClient";
-import { getCategoricalSpending } from "./statsUtil";
-import { ignoredCategories } from "../constants/Categories";
 
 const isUnauthorized = (error) => error instanceof ApiError && error.status === 401;
 const logReadFailure = (label, error) => {
@@ -47,25 +45,6 @@ export const getTransactionCount = async () => {
 		if (isUnauthorized(error)) return 0;
 		throw error;
 	}
-};
-
-export const getTransactionsByMonth = async (dateObj) => {
-	try {
-		const data = await apiRequest(
-			`/api/transactions/month?month=${dateObj.getMonth() + 1}&year=${dateObj.getFullYear()}`
-		);
-		return formatTransactions(data);
-	} catch (error) {
-		if (!isUnauthorized(error)) logReadFailure("Could not fetch dashboard statistics", error);
-		return [];
-	}
-};
-
-export const insertTransactions = async (transactions) => {
-	await apiRequest("/api/transactions/import", {
-		method: "POST",
-		body: JSON.stringify({ transactions }),
-	});
 };
 
 export const setTransactionIgnored = async (transactionId, ignored) => {
@@ -122,24 +101,6 @@ export const setTransactionCategories = async (transactions, categoryName) => {
 	}
 };
 
-export const updateTransactions = async (transactions) => {
-	try {
-		await apiRequest("/api/transactions", {
-			method: "PUT",
-			body: JSON.stringify({
-				transactions: transactions.map((transaction) => ({
-					id: transaction.id,
-					categoryName: transaction.categoryName,
-					ignored: transaction.ignored,
-				})),
-			}),
-		});
-		return true;
-	} catch {
-		return false;
-	}
-};
-
 export const deleteTransaction = async (transactionId) => {
 	try {
 		await apiRequest(`/api/transactions/${transactionId}`, {
@@ -182,9 +143,12 @@ export const upsertConfiguration = async (configuration) => {
 			method: "POST",
 			body: JSON.stringify({ configuration }),
 		});
-		return true;
-	} catch {
-		return false;
+		return { success: true, error: null };
+	} catch (error) {
+		return {
+			success: false,
+			error: error instanceof Error ? error.message : "Could not save configuration.",
+		};
 	}
 };
 
@@ -211,70 +175,11 @@ export const getCategories = async () => {
 };
 
 export const getSpending = async (year) => {
-	let spending = [];
-	const yearTotals = { Total: 0 };
-	for (let i = 0; i < 12; i++) {
-		const transactions = await getTransactionsByMonth(new Date(year, i, 1));
-		const categoricalSpending = await getCategoricalSpending(transactions);
-
-		let total = 0;
-		Object.keys(categoricalSpending).forEach((categoryName) => {
-			if (!ignoredCategories.includes(categoryName)) total += categoricalSpending[categoryName];
-			if (!Object.keys(yearTotals).includes(categoryName)) yearTotals[categoryName] = 0;
-			yearTotals[categoryName] += categoricalSpending[categoryName];
-		});
-		categoricalSpending["Total"] = total;
-		yearTotals["Total"] += total;
-		categoricalSpending["Income"] *= -1;
-		spending[i] = categoricalSpending;
-	}
-
-	yearTotals["Income"] *= -1;
-	spending[12] = yearTotals;
-	return spending;
+	return await apiRequest(`/api/spending?year=${year}`);
 };
 
 export const getBudgets = async (date) => {
-	let budgetLimits = [];
-	try {
-		budgetLimits = await apiRequest("/api/budget-limits");
-	} catch (error) {
-		if (!isUnauthorized(error)) throw error;
-	}
-	const [categoriesData, transactions] = await Promise.all([getCategories(), getTransactionsByMonth(date)]);
-	const categoricalSpending = getCategoricalSpending(transactions);
-
-	let totalLimit = 0;
-	let totalSpending = 0;
-	let budgets = categoriesData.map((budget) => {
-		const newBudget = { ...budget };
-		const matchedBudget = budgetLimits.find((limitRow) => limitRow.categoryName === newBudget.name);
-		newBudget.limit = matchedBudget ? Number(matchedBudget.limit) : null;
-		newBudget.spending = categoricalSpending[newBudget.name] || 0;
-		newBudget.percentage = newBudget.limit ? (newBudget.spending / newBudget.limit) * 100 : null;
-
-		if (!ignoredCategories.includes(newBudget.name)) {
-			if (newBudget.limit) totalLimit += newBudget.limit;
-			totalSpending += newBudget.spending;
-		}
-
-		return newBudget;
-	});
-
-	budgets.sort((a, b) => a.orderIndex - b.orderIndex);
-
-	const totalBudget = {
-		name: "Total",
-		limit: totalLimit > 0 ? totalLimit : null,
-		spending: totalSpending,
-		percentage: totalLimit > 0 ? (totalSpending / totalLimit) * 100 : null,
-		color: "white",
-		colorDark: "rgb(226 232 240)",
-		colorLight: "rgb(248 250 252)",
-	};
-	budgets = [totalBudget, ...budgets];
-
-	return budgets;
+	return await apiRequest(`/api/budgets?month=${date.getMonth() + 1}&year=${date.getFullYear()}`);
 };
 
 export const updateBudget = async (newBudgets) => {
@@ -343,17 +248,29 @@ export const getUploads = async () => {
 	}
 };
 
-export const createUpload = async (_userId, uploadId, files, transactionsUploaded) => {
-	await apiRequest("/api/uploads", {
+export const previewTransactionsUpload = async (uploadId, files) => {
+	return await apiRequest("/api/uploads/preview", {
 		method: "POST",
-		body: JSON.stringify({
-			upload: {
-				id: uploadId,
-				files,
-				transactionsUploaded,
-			},
-		}),
+		body: JSON.stringify({ uploadId, files }),
 	});
+};
+
+export const commitTransactionsUpload = async (uploadId, filesLabel, transactions) => {
+	return await apiRequest("/api/uploads/commit", {
+		method: "POST",
+		body: JSON.stringify({ uploadId, filesLabel, transactions }),
+	});
+};
+
+export const applyMerchantSettingsToExisting = async () => {
+	try {
+		await apiRequest("/api/merchants/apply-existing", {
+			method: "POST",
+		});
+		return true;
+	} catch {
+		return false;
+	}
 };
 
 export const deleteUpload = async (uploadId) => {

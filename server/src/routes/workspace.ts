@@ -10,6 +10,16 @@ import {
   uploads
 } from "../db/schema.js";
 import { requireSession } from "../auth/session.js";
+import {
+  applyMerchantRulesToExistingTransactions,
+  buildBudgets,
+  buildDashboardStats,
+  buildSpendingBreakdown,
+  commitTransactionsImport,
+  serializeTransaction,
+  previewTransactionsImport,
+  validateConfigurationPayload
+} from "../services/workspace.js";
 
 const router = Router();
 
@@ -25,23 +35,6 @@ function toSqlDate(input: string) {
   const month = `${parsed.getMonth() + 1}`.padStart(2, "0");
   const day = `${parsed.getDate()}`.padStart(2, "0");
   return `${year}-${month}-${day}`;
-}
-
-function serializeTransaction(row: typeof transactions.$inferSelect) {
-  return {
-    id: row.id,
-    userId: row.userId,
-    configurationName: row.configurationName,
-    categoryName: row.categoryName,
-    amount: Number(row.amount),
-    date: row.date,
-    day: row.day,
-    month: row.month,
-    year: row.year,
-    merchant: row.merchant,
-    ignored: row.ignored,
-    uploadId: row.uploadId
-  };
 }
 
 router.get("/transactions", async (req, res) => {
@@ -75,6 +68,22 @@ router.get("/transactions/month", async (req, res) => {
   });
 
   res.json(rows.map(serializeTransaction));
+});
+
+router.post("/dashboard/stats", async (req, res) => {
+  const stats = await buildDashboardStats(req.authUser!.id, Array.isArray(req.body?.filters) ? req.body.filters : []);
+  res.json(stats);
+});
+
+router.get("/spending", async (req, res) => {
+  const year = Number(req.query.year);
+  res.json(await buildSpendingBreakdown(req.authUser!.id, year));
+});
+
+router.get("/budgets", async (req, res) => {
+  const month = Number(req.query.month);
+  const year = Number(req.query.year);
+  res.json(await buildBudgets(req.authUser!.id, month, year));
 });
 
 router.post("/transactions/import", async (req, res) => {
@@ -192,6 +201,12 @@ router.get("/configurations", async (req, res) => {
 
 router.post("/configurations", async (req, res) => {
   const payload = req.body?.configuration;
+  const errors = validateConfigurationPayload(payload ?? {});
+  if (errors.length > 0) {
+    res.status(400).json({ error: errors[0], errors });
+    return;
+  }
+
   await db
     .insert(configurations)
     .values({
@@ -341,6 +356,10 @@ router.delete("/merchants/:id", async (req, res) => {
   res.json({ ok: true });
 });
 
+router.post("/merchants/apply-existing", async (req, res) => {
+  res.json(await applyMerchantRulesToExistingTransactions(req.authUser!.id));
+});
+
 router.get("/uploads", async (req, res) => {
   const rows = await db.query.uploads.findMany({
     where: eq(uploads.userId, req.authUser!.id),
@@ -358,6 +377,31 @@ router.post("/uploads", async (req, res) => {
     transactionsUploaded: Number(payload.transactionsUploaded)
   });
   res.json({ ok: true });
+});
+
+router.post("/uploads/preview", async (req, res) => {
+  const uploadId = String(req.body?.uploadId ?? "");
+  const files = Array.isArray(req.body?.files) ? req.body.files : [];
+
+  if (!uploadId || files.length === 0) {
+    res.status(400).json({ error: "Upload preview requires an upload id and at least one file." });
+    return;
+  }
+
+  res.json(await previewTransactionsImport(req.authUser!.id, uploadId, files));
+});
+
+router.post("/uploads/commit", async (req, res) => {
+  const uploadId = String(req.body?.uploadId ?? "");
+  const filesLabel = String(req.body?.filesLabel ?? "");
+  const payload = Array.isArray(req.body?.transactions) ? req.body.transactions : [];
+
+  if (!uploadId || !filesLabel) {
+    res.status(400).json({ error: "Upload commit requires an upload id and file metadata." });
+    return;
+  }
+
+  res.json(await commitTransactionsImport(req.authUser!.id, uploadId, filesLabel, payload));
 });
 
 router.delete("/uploads/:id", async (req, res) => {

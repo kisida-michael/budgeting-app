@@ -5,6 +5,7 @@ import {
   createPlaidLinkToken,
   disconnectPlaidItem,
   exchangePlaidPublicToken,
+  getPlaidErrorDetails,
   getPlaidStatus,
   syncAllPlaidItems,
   syncPlaidItemTransactions
@@ -30,8 +31,13 @@ router.post("/link-token", async (req, res) => {
     return;
   }
 
-  const data = await createPlaidLinkToken(req.authUser!.id);
-  res.json(data);
+  try {
+    const data = await createPlaidLinkToken(req.authUser!.id);
+    res.json(data);
+  } catch (error) {
+    const plaidError = getPlaidErrorDetails(error);
+    res.status(plaidError.status).json(plaidError.body);
+  }
 });
 
 router.post("/exchange", async (req, res) => {
@@ -56,9 +62,8 @@ router.post("/exchange", async (req, res) => {
 
     res.json(result);
   } catch (error) {
-    res.status(502).json({
-      error: error instanceof Error ? error.message : "Plaid token exchange failed."
-    });
+    const plaidError = getPlaidErrorDetails(error);
+    res.status(plaidError.status).json(plaidError.body);
   }
 });
 
@@ -76,9 +81,8 @@ router.post("/sync", async (req, res) => {
 
     res.json(result);
   } catch (error) {
-    res.status(502).json({
-      error: error instanceof Error ? error.message : "Plaid sync failed."
-    });
+    const plaidError = getPlaidErrorDetails(error);
+    res.status(plaidError.status).json(plaidError.body);
   }
 });
 

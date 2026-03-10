@@ -66,10 +66,9 @@ const store = (set, get) => ({
 	setDashboardStats: (dashboardStats) => set(() => ({ dashboardStats })),
 	dashboardStatsLoading: true,
 	fetchDashboardStats: async () => {
-		const { transactions, filters } = get();
-		if (transactions === null || filters === null) return;
+		const { filters } = get();
 		set({ dashboardStatsLoading: true });
-		const data = await getDashboardStats(transactions, filters);
+		const data = await getDashboardStats(null, filters);
 		set({ dashboardStats: data, dashboardStatsLoading: false });
 	},
 	dashboardSortState: null,

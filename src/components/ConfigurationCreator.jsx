@@ -104,43 +104,9 @@ const ConfigurationCreator = () => {
 		setSaveConfigurationErrors([]);
 		setLoading({ ...loading, save: true });
 
-		const errors = [];
-		if (activeConfiguration.name === null) errors.push("Configuration name cannot be empty.");
-		if (activeConfiguration.name.length > 25)
-			errors.push("Configuration name cannot be longer than 25 characters.");
-
-		if (activeConfiguration.dateColNum === null) errors.push("Date column number cannot be empty.");
-		else if (isNaN(activeConfiguration.dateColNum)) errors.push("Date column number must be a number.");
-
-		if (activeConfiguration.amountColNum === null) errors.push("Amount column number cannot be empty.");
-		if (isNaN(activeConfiguration.amountColNum)) errors.push("Amount column number must be a number.");
-
-		if (activeConfiguration.merchantColNum === null) errors.push("Merchant column number cannot be empty.");
-		else if (isNaN(activeConfiguration.merchantColNum)) errors.push("Merchant column number must be a number.");
-
-		const selectedSymbolOptions = [];
-		if (activeConfiguration.minusSymbolMeaning) selectedSymbolOptions.push(activeConfiguration.minusSymbolMeaning);
-		if (activeConfiguration.plusSymbolMeaning) selectedSymbolOptions.push(activeConfiguration.plusSymbolMeaning);
-		if (activeConfiguration.noSymbolMeaning) selectedSymbolOptions.push(activeConfiguration.noSymbolMeaning);
-		if (selectedSymbolOptions.length != 2) {
-			errors.push("Exactly two checkboxes should be selected signifying transactions minus/plus/no symbols.");
-		} else {
-			const credits = selectedSymbolOptions.filter((option) => option === "credit").length;
-			if (credits != 1) errors.push("Exactly one checkbox should be selected for credit transactions.");
-			const charges = selectedSymbolOptions.filter((option) => option === "charge").length;
-			if (charges != 1) errors.push("Exactly one checkbox should be selected for charge transactions.");
-		}
-
-		// Check for errors before making Supabase call
-		if (errors.length > 0) {
-			setSaveConfigurationErrors(errors);
-			setLoading({ ...loading, save: false });
-			return;
-		}
-
-		const success = await upsertConfiguration(activeConfiguration);
-		if (!success) {
-			setSaveConfigurationErrors(["Could not save configuration."]);
+		const result = await upsertConfiguration(activeConfiguration);
+		if (!result.success) {
+			setSaveConfigurationErrors([result.error || "Could not save configuration."]);
 			setLoading({ ...loading, save: false });
 			return;
 		}

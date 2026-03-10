@@ -1,7 +1,9 @@
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
+import axios from "axios";
 import { db } from "../db/client.js";
 import { merchants, plaidAccounts, plaidItems, transactions } from "../db/schema.js";
 import { getPlaidClient, plaidCountryCodes, plaidProducts } from "./client.js";
+import { env } from "../env.js";
 
 const PLAID_CONFIGURATION_NAME = "Plaid";
 const DEFAULT_CATEGORY = "Uncategorized";
@@ -262,7 +264,7 @@ export async function getPlaidStatus(userId: string) {
 
 export async function createPlaidLinkToken(userId: string) {
   const client = getPlaidClient();
-  const response = await client.linkTokenCreate({
+  const linkTokenRequest: Parameters<typeof client.linkTokenCreate>[0] = {
     user: {
       client_user_id: userId
     },
@@ -270,11 +272,50 @@ export async function createPlaidLinkToken(userId: string) {
     products: plaidProducts,
     country_codes: plaidCountryCodes,
     language: "en"
-  });
+  };
+
+  if (env.PLAID_REDIRECT_URI) {
+    linkTokenRequest.redirect_uri = env.PLAID_REDIRECT_URI;
+  }
+
+  const response = await client.linkTokenCreate(linkTokenRequest);
 
   return {
     linkToken: response.data.link_token,
     expiration: response.data.expiration
+  };
+}
+
+export function getPlaidErrorDetails(error: unknown) {
+  if (axios.isAxiosError(error)) {
+    const status = error.response?.status ?? 502;
+    const data = error.response?.data as Record<string, unknown> | undefined;
+    const requestId = typeof data?.request_id === "string" ? data.request_id : undefined;
+    const errorCode = typeof data?.error_code === "string" ? data.error_code : undefined;
+    const errorType = typeof data?.error_type === "string" ? data.error_type : undefined;
+    const errorMessage =
+      typeof data?.error_message === "string"
+        ? data.error_message
+        : error.message || "Plaid request failed.";
+
+    return {
+      status,
+      body: {
+        error: errorMessage,
+        plaid: {
+          requestId,
+          errorCode,
+          errorType
+        }
+      }
+    };
+  }
+
+  return {
+    status: 502,
+    body: {
+      error: error instanceof Error ? error.message : "Plaid request failed."
+    }
   };
 }
 

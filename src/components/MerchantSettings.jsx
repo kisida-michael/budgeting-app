@@ -2,9 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useDataStore } from "../util/dataStore";
 import MerchantSettingsItem from "./MerchantSettingsItem";
 import MerchantSettingsItemCreate from "./MerchantSettingsItemCreate";
-import { getTransactions, updateTransactions } from "../util/supabaseQueries";
-import { checkForSavedMerchants } from "../util/transactionUtil";
-import { getDashboardStats } from "../util/statsUtil";
+import { applyMerchantSettingsToExisting } from "../util/supabaseQueries";
 import ButtonSpinner from "./ButtonSpinner";
 
 const MerchantSettings = () => {
@@ -13,18 +11,18 @@ const MerchantSettings = () => {
 		fetchMerchantSettings,
 		editingMerchantSetting,
 		setEditingMerchantSetting,
-		filters,
-		setTransactions,
-		setDashboardStats,
+		fetchTransactions,
+		fetchDashboardStats,
+		fetchBudgets,
 		setNotification,
 	} = useDataStore((state) => ({
 		merchantSettings: state.merchantSettings,
 		fetchMerchantSettings: state.fetchMerchantSettings,
 		editingMerchantSetting: state.editingMerchantSetting,
 		setEditingMerchantSetting: state.setEditingMerchantSetting,
-		filters: state.filters,
-		setTransactions: state.setTransactions,
-		setDashboardStats: state.setDashboardStats,
+		fetchTransactions: state.fetchTransactions,
+		fetchDashboardStats: state.fetchDashboardStats,
+		fetchBudgets: state.fetchBudgets,
 		setNotification: state.setNotification,
 	}));
 	const [loading, setLoading] = useState({
@@ -58,9 +56,7 @@ const MerchantSettings = () => {
 		if (Object.values(loading).some((value) => value)) return;
 
 		setLoading({ ...loading, apply: true });
-		let allTransactions = await getTransactions();
-		allTransactions = checkForSavedMerchants(allTransactions, merchantSettings);
-		const success = await updateTransactions(allTransactions);
+		const success = await applyMerchantSettingsToExisting();
 
 		if (!success) {
 			setLoading({ ...loading, apply: false });
@@ -68,8 +64,9 @@ const MerchantSettings = () => {
 			return;
 		}
 
-		setTransactions(allTransactions);
-		setDashboardStats(await getDashboardStats(allTransactions, filters));
+		await fetchTransactions();
+		await fetchDashboardStats();
+		await fetchBudgets();
 		setNotification({
 			type: "success",
 			message: "Successfully applied merchant settings to existing transactions.",

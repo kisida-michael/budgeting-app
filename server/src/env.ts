@@ -24,6 +24,7 @@ const envSchema = z.object({
   PLAID_CLIENT_ID: optionalString,
   PLAID_SECRET: optionalString,
   PLAID_ENV: z.enum(["sandbox", "production"]).default("sandbox"),
+  PLAID_REDIRECT_URI: optionalString,
   PLAID_PRODUCTS: z
     .string()
     .default("transactions")

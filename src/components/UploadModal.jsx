@@ -1,10 +1,5 @@
 import { useState, useEffect, useRef, Fragment } from "react";
-import { insertTransactions, createUpload } from "../util/supabaseQueries";
-import {
-	parseTransactionsFromCSV,
-	checkForDuplicateTransactions,
-	checkForSavedMerchants,
-} from "../util/transactionUtil";
+import { commitTransactionsUpload, previewTransactionsUpload } from "../util/supabaseQueries";
 import { useDataStore } from "../util/dataStore";
 import { useAnimationStore } from "../util/animationStore";
 import ButtonSpinner from "../components/ButtonSpinner";
@@ -13,6 +8,7 @@ const UploadModal = () => {
 	const [stagedFiles, setStagedFiles] = useState([]);
 	const [pendingTransactions, setPendingTransactions] = useState([]);
 	const [pendingUploadId, setPendingUploadId] = useState(null);
+	const [pendingFilesLabel, setPendingFilesLabel] = useState("");
 	const [duplicateTransactions, setDuplicateTransactions] = useState([]);
 	const [loading, setLoading] = useState(false);
 	const fileInputRef = useRef(null);
@@ -20,23 +16,19 @@ const UploadModal = () => {
 	const {
 		configurations,
 		fetchConfigurations,
-		fetchMerchantSettings,
 		setNotification,
 		fetchTransactions,
 		fetchDashboardStats,
 		fetchUploads,
-		merchantSettings,
-		session,
+		fetchTotalTransactionCount,
 	} = useDataStore((state) => ({
 		configurations: state.configurations,
 		fetchConfigurations: state.fetchConfigurations,
-		fetchMerchantSettings: state.fetchMerchantSettings,
 		setNotification: state.setNotification,
 		fetchTransactions: state.fetchTransactions,
 		fetchDashboardStats: state.fetchDashboardStats,
 		fetchUploads: state.fetchUploads,
-		merchantSettings: state.merchantSettings,
-		session: state.session,
+		fetchTotalTransactionCount: state.fetchTotalTransactionCount,
 	}));
 	const { uploadModalVisible, uploadModalAnimating, closeUploadModal } = useAnimationStore((state) => ({
 		uploadModalVisible: state.uploadModalVisible,
@@ -48,9 +40,8 @@ const UploadModal = () => {
 		if (!uploadModalVisible && !uploadModalAnimating) return;
 
 		if (configurations === null) fetchConfigurations();
-		if (merchantSettings === null) fetchMerchantSettings();
 		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [uploadModalVisible, uploadModalAnimating, configurations, merchantSettings]);
+	}, [uploadModalVisible, uploadModalAnimating, configurations]);
 
 	const onStageFile = (event) => {
 		const stagedFileNames = stagedFiles.map((stagedFile) => stagedFile.file.name); // Existing staged files
@@ -123,59 +114,29 @@ const UploadModal = () => {
 			// Generate a UUID for this upload
 			const uploadId = crypto.randomUUID();
 
-			// Create promises to read each file
-			const promises = [];
-			for (const stagedFile of stagedFiles) {
-				let filePromise = new Promise((resolve) => {
-					let reader = new FileReader();
-					reader.readAsText(stagedFile.file);
-					reader.onload = () => resolve(reader.result);
-				});
-				promises.push(filePromise);
-			}
+			const files = await Promise.all(
+				stagedFiles.map(async (stagedFile) => ({
+					name: stagedFile.file.name,
+					configurationName: stagedFile.configuration,
+					content: await stagedFile.file.text(),
+				}))
+			);
 
-			// Once all promises are resolved, parse transactions
-			let transactions = [];
-			Promise.all(promises).then((fileContents) => {
-				fileContents.forEach((fileContent, index) => {
-					const parsedTransactions = parseTransactionsFromCSV(
-						fileContent,
-						configurations?.find(
-							(configuration) => configuration.name === stagedFiles[index].configuration
-						),
-						session.user.id,
-						uploadId
-					);
-					transactions.push(...parsedTransactions);
-				});
-			});
-
-			const duplicateResults = await checkForDuplicateTransactions(transactions);
-			if (duplicateResults.length > 0) {
-				setPendingTransactions(
-					transactions.filter((t) => !duplicateResults.some((d) => d.tempInsertId === t.tempInsertId))
-				);
+			const preview = await previewTransactionsUpload(uploadId, files);
+			if (preview.duplicateTransactions.length > 0) {
+				setPendingTransactions(preview.pendingTransactions);
 				setPendingUploadId(uploadId);
-				setDuplicateTransactions(duplicateResults);
+				setPendingFilesLabel(preview.filesLabel);
+				setDuplicateTransactions(preview.duplicateTransactions);
 				setLoading(false);
 				return;
 			}
 
-			transactions = transactions.map((transaction) => {
-				delete transaction.tempInsertId;
-				return transaction;
-			});
-
-			transactions = checkForSavedMerchants(transactions, merchantSettings);
-
-			const fileNames = stagedFiles
-				.map((stagedFile) => stagedFile.file.name + ` (${stagedFile.configuration})`)
-				.join("\n");
-			await createUpload(session.user.id, uploadId, fileNames, transactions.length);
-			await insertTransactions(transactions);
+			await commitTransactionsUpload(uploadId, preview.filesLabel, preview.pendingTransactions);
 			await fetchTransactions();
 			await fetchDashboardStats();
 			await fetchUploads();
+			await fetchTotalTransactionCount();
 		} catch (error) {
 			setNotification({ message: error.message, type: "error" });
 			setLoading(false);
@@ -189,7 +150,7 @@ const UploadModal = () => {
 
 	const onDuplicateUpload = async () => {
 		setLoading(true);
-		let transactions = [...pendingTransactions];
+		const transactions = [...pendingTransactions];
 
 		duplicateTransactions.forEach((duplicate) => {
 			if (duplicate.include) {
@@ -197,22 +158,11 @@ const UploadModal = () => {
 			}
 		});
 
-		transactions = transactions.map((transaction) => {
-			delete transaction.tempInsertId;
-			delete transaction.include;
-			return transaction;
-		});
-
-		transactions = checkForSavedMerchants(transactions, merchantSettings);
-
-		const fileNames = stagedFiles
-			.map((stagedFile) => stagedFile.file.name + ` (${stagedFile.configuration})`)
-			.join("\n");
-		await createUpload(session.user.id, pendingUploadId, fileNames, transactions.length);
-		await insertTransactions(transactions);
+		await commitTransactionsUpload(pendingUploadId, pendingFilesLabel, transactions);
 		await fetchTransactions();
 		await fetchDashboardStats();
 		await fetchUploads();
+		await fetchTotalTransactionCount();
 
 		onClose();
 		setNotification({ message: "Transactions uploaded successfully!", type: "success" });
@@ -224,6 +174,7 @@ const UploadModal = () => {
 		setDuplicateTransactions([]);
 		setPendingTransactions([]);
 		setPendingUploadId(null);
+		setPendingFilesLabel("");
 		setStagedFiles([]);
 		document.querySelector("#fileInput").value = "";
 		setLoading(false);
@@ -233,6 +184,7 @@ const UploadModal = () => {
 		setPendingTransactions([]);
 		setDuplicateTransactions([]);
 		setPendingUploadId(null);
+		setPendingFilesLabel("");
 	};
 
 	return (

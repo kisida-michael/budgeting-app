@@ -30,7 +30,6 @@ const Budgets = () => {
 		setBudgetsMonth: state.setBudgetsMonth,
 		budgetsYear: state.budgetsYear,
 		setBudgetsYear: state.setBudgetsYear,
-		session: state.session,
 		setNotification: state.setNotification,
 	}));
 	const [localBudgets, setLocalBudgets] = useState(budgets);
@@ -65,7 +64,7 @@ const Budgets = () => {
 	const onClickSave = async () => {
 		if (editing && !saving) {
 			setSaving(true);
-			if (!(await updateBudget(localBudgets, session.user.id)))
+			if (!(await updateBudget(localBudgets)))
 				setNotification({ type: "error", message: "Could not update budgets." });
 			await fetchBudgets();
 			setEditing(false);

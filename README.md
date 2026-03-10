@@ -32,4 +32,5 @@ This branch is the source-only rewrite workspace for `sheehan-j/budgeting-app`.
 - Auth is now Clerk-backed: `src/` uses Clerk React with the preserved login UI, and the Express API verifies Clerk bearer tokens while preserving the app's existing `{ user: { id, email } }` session contract.
 - Set `VITE_CLERK_PUBLISHABLE_KEY` and `CLERK_SECRET_KEY` in `.env` before starting the app. The server will also accept `CLERK_PUBLISHABLE_KEY`, but it now falls back to `VITE_CLERK_PUBLISHABLE_KEY` automatically.
 - Plaid now has persisted item/account state plus authenticated status, link-token, exchange, sync, and disconnect endpoints; set `PLAID_CLIENT_ID` and `PLAID_SECRET` in `.env` to enable the dashboard flow.
+- For production web Link flows, set `PLAID_REDIRECT_URI` to the HTTPS redirect URI registered in Plaid Dashboard. If Plaid rejects a production call, the API now returns the upstream JSON error details instead of an HTML stack trace.
 - The Plaid pass maps synced transactions back into the existing transaction table and preserved UI using the synthetic configuration name `Plaid`.

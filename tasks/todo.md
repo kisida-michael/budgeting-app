@@ -1,9 +1,9 @@
 # Budget Rewrite
 
 ## Current Task
-- [x] Reproduce and fix the Clerk custom signup failure caused by missing CAPTCHA/state handling in the preserved login UI.
-- [x] Keep the preserved login/signup screen shape, but make verification resilient to failed or repeated attempts.
-- [x] Validate the fix with lint/build and a live local Clerk signup smoke test if the configured keys allow it.
+- [x] Fix Plaid production `link/token/create` handling so production config errors surface as JSON instead of HTML stack traces.
+- [x] Add Plaid production OAuth config support for web redirect URIs.
+- [x] Document the Plaid production requirements and verify the server/frontend build after the patch.
 
 ## Active Plan
 - [x] Clone the original source repository into this project root.
@@ -64,3 +64,10 @@
 - Reworked the preserved custom signup flow onto Clerk v6's current sign-up resource, added the required `#clerk-captcha` mount, and made the verification step support resend, reset, and resume-after-refresh behavior.
 - Reloaded the Clerk sign-up resource before finalization so email-code verification no longer fails on stale local status, and now surface Clerk-required missing signup fields explicitly instead of a generic completion error.
 - Verified the follow-up auth pass with `npm run lint`, `npm run typecheck`, and `npm run build`.
+- Added `server/src/services/workspace.ts` to centralize dashboard stats, spending rollups, budget derivation, configuration validation, CSV parsing, duplicate detection, upload commit, and merchant-rule application.
+- Added authenticated API endpoints for `/api/dashboard/stats`, `/api/spending`, `/api/budgets`, `/api/uploads/preview`, `/api/uploads/commit`, and `/api/merchants/apply-existing`.
+- Refactored the preserved frontend so `statsUtil.js` is now just an API client, upload preview/commit runs through the Express API, merchant-rule reapplication happens on the server, and configuration saves use server validation responses.
+- Verified `npm run lint`, `npm run typecheck`, `npm run build`, `curl http://localhost:4000/health`, and unauthenticated `401` responses from the new protected routes to confirm they are mounted.
+- Added optional `PLAID_REDIRECT_URI` support to `link/token/create` for production web OAuth flows and changed Plaid route error handling to return upstream JSON error details instead of Express HTML error pages.
+- Documented the production Plaid requirement in `.env.example`, `README.md`, and `tasks/lessons.md`.
+- Verified the Plaid production handling pass with `npm run lint`, `npm run typecheck`, and `npm run build`.
