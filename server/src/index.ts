@@ -1,6 +1,6 @@
 import cors from "cors";
 import express from "express";
-import cookieParser from "cookie-parser";
+import { clerkMiddleware } from "@clerk/express";
 import { sql } from "drizzle-orm";
 import { env } from "./env.js";
 import { createAppMetaResponse, createHealthResponse } from "@budget/shared";
@@ -14,10 +14,16 @@ const app = express();
 app.use(
   cors({
     origin: env.CLIENT_ORIGIN,
-    credentials: true
+    credentials: false,
+    allowedHeaders: ["Content-Type", "Authorization"]
   })
 );
-app.use(cookieParser());
+app.use(
+  clerkMiddleware({
+    publishableKey: env.CLERK_PUBLISHABLE_KEY,
+    secretKey: env.CLERK_SECRET_KEY
+  })
+);
 app.use(express.json());
 
 app.get("/health", (_req, res) => {
@@ -29,7 +35,7 @@ app.get("/api/meta", (_req, res) => {
     createAppMetaResponse({
       name: "jsheehan-budget-rewrite",
       version: "0.1.0",
-      authProvider: "Express cookie session auth",
+      authProvider: "Clerk bearer-token auth",
       transactionSource: "CSV import parity from original source",
       interfaceSource: "Legacy budgeting-app layout and green/slate visual style",
       persistence: "Postgres + Drizzle"

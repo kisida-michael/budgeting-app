@@ -1,56 +1,81 @@
-import { apiRequest } from "./apiClient";
-
 const listeners = new Set();
+let clerkAdapter = null;
 
-const emitAuthChange = async (event, session) => {
+const normalizeSession = (session) => {
+	if (!session?.user?.id) return null;
+
+	return {
+		user: {
+			id: session.user.id,
+			email: session.user.email ?? "",
+		},
+	};
+};
+
+const createErrorResult = (error) => ({
+	data: { session: null },
+	error: { message: error instanceof Error ? error.message : String(error) },
+});
+
+export const emitAuthChange = async (event, session) => {
+	const normalizedSession = normalizeSession(session);
 	for (const listener of listeners) {
-		await listener(event, session);
+		await listener(event, normalizedSession);
 	}
+};
+
+export const configureClerkAdapter = (adapter) => {
+	clerkAdapter = adapter;
+};
+
+const requireAdapter = () => {
+	if (!clerkAdapter) {
+		throw new Error("Clerk auth adapter is not ready.");
+	}
+
+	return clerkAdapter;
 };
 
 const supabase = {
 	auth: {
 		async getSession() {
 			try {
-				const data = await apiRequest("/api/auth/session");
-				return { data, error: null };
+				const session = await requireAdapter().getSession();
+				return { data: { session: normalizeSession(session) }, error: null };
 			} catch (error) {
-				return { data: { session: null }, error };
+				return createErrorResult(error);
 			}
 		},
 		async signInWithPassword(credentials) {
 			try {
-				const data = await apiRequest("/api/auth/login", {
-					method: "POST",
-					body: JSON.stringify(credentials),
-				});
-				await emitAuthChange("SIGNED_IN", data.session);
-				return { data, error: null };
+				const data = await requireAdapter().signInWithPassword(credentials);
+				return { data: { session: normalizeSession(data?.session), ...data }, error: null };
 			} catch (error) {
-				return { data: { session: null }, error: { message: error.message } };
+				return createErrorResult(error);
 			}
 		},
 		async signUp(credentials) {
 			try {
-				const data = await apiRequest("/api/auth/signup", {
-					method: "POST",
-					body: JSON.stringify(credentials),
-				});
-				await emitAuthChange("SIGNED_IN", data.session);
-				return { data, error: null };
+				const data = await requireAdapter().signUp(credentials);
+				return { data: { session: normalizeSession(data?.session), ...data }, error: null };
 			} catch (error) {
-				return { data: { session: null }, error: { message: error.message } };
+				return createErrorResult(error);
+			}
+		},
+		async verifyEmailCode(payload) {
+			try {
+				const data = await requireAdapter().verifyEmailCode(payload);
+				return { data: { session: normalizeSession(data?.session), ...data }, error: null };
+			} catch (error) {
+				return createErrorResult(error);
 			}
 		},
 		async signOut() {
 			try {
-				await apiRequest("/api/auth/logout", {
-					method: "POST",
-				});
-				await emitAuthChange("SIGNED_OUT", null);
+				await requireAdapter().signOut();
 				return { error: null };
 			} catch (error) {
-				return { error: { message: error.message } };
+				return { error: { message: error instanceof Error ? error.message : String(error) } };
 			}
 		},
 		onAuthStateChange(listener) {

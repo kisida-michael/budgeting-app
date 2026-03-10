@@ -16,6 +16,12 @@
 - [x] Map Plaid accounts/transactions into the existing transaction/category model without changing current frontend screens.
 - [x] Wire the preserved dashboard Plaid card to Link, connect, sync, and connection-state UX without changing the interface structure.
 - [x] Validate the Plaid pass with lint/build plus authenticated API smoke tests for status and guarded connect/sync behavior.
+- [x] Add Clerk React/Express env and provider wiring while preserving the existing `src/` UI shell.
+- [x] Replace the frontend auth shim and API transport so the app keeps the same `{ user: { id, email } }` session contract over Clerk.
+- [x] Replace backend local cookie auth with Clerk middleware and a thin compatibility `/api/auth/session` plus whitelist check.
+- [x] Remove local login/signup/logout endpoints and password-cookie dependencies without breaking protected API routes.
+- [x] Validate the Clerk pass with typecheck/build and authenticated session + protected-route smoke tests.
+- [x] Add `michael@kisida.com` to the local signup whitelist.
 
 ## Review
 - Cloned `sheehan-j/budgeting-app` into this project root.
@@ -43,3 +49,10 @@
 - Wired the preserved dashboard Plaid card to `react-plaid-link`, connection status, manual sync, disconnect, and data refresh back into the existing dashboard/budget stores.
 - Documented Plaid env setup in `.env.example` and `README.md`.
 - Verified `npm run typecheck`, `npm run lint`, `npm run build`, `npm run db:generate`, `npm run db:migrate`, authenticated `GET /api/plaid/status`, and guarded `POST /api/plaid/link-token` returning `503` without Plaid credentials.
+- Replaced local cookie/password auth with Clerk React + Clerk Express while preserving the existing frontend session shape and login UI structure.
+- Swapped API auth transport from cookie credentials to Clerk bearer tokens generated with `getToken()`, which matches the current `localhost:5173` -> `localhost:4000` split.
+- Kept `/api/auth/session` and `/api/auth/whitelist` as compatibility endpoints and removed local login/signup/logout routes plus dead password-cookie dependencies.
+- Added signup email-code verification to the preserved login screen so Clerk custom signup can complete without replacing the UI.
+- Verified `npm run typecheck`, `npm run lint`, and `npm run build` after the Clerk swap.
+- Live Clerk session smoke tests are still blocked in this environment because `.env` does not yet contain `VITE_CLERK_PUBLISHABLE_KEY` or `CLERK_SECRET_KEY`.
+- Patched the Express Clerk bootstrap to fall back to `VITE_CLERK_PUBLISHABLE_KEY`, which fixed the local `500` on `/api/auth/whitelist` when only the Vite-prefixed publishable key was set.

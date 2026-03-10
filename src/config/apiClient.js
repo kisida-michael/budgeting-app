@@ -1,4 +1,9 @@
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? "";
+let authTokenGetter = null;
+
+export const setApiTokenGetter = (getter) => {
+	authTokenGetter = getter;
+};
 
 export class ApiError extends Error {
 	constructor(message, status) {
@@ -9,10 +14,11 @@ export class ApiError extends Error {
 }
 
 export const apiRequest = async (path, init = {}) => {
+	const token = authTokenGetter ? await authTokenGetter() : null;
 	const response = await fetch(`${API_BASE_URL}${path}`, {
-		credentials: "include",
 		headers: {
 			"Content-Type": "application/json",
+			...(token ? { Authorization: `Bearer ${token}` } : {}),
 			...(init.headers || {}),
 		},
 		...init,

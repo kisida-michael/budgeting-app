@@ -1,59 +1,28 @@
 import type { NextFunction, Request, Response } from "express";
-import jwt from "jsonwebtoken";
-import { env } from "../env.js";
-
-export const SESSION_COOKIE = "budget_session";
+import { getAuth } from "@clerk/express";
 
 export interface SessionUser {
   id: string;
   email: string;
 }
 
-interface SessionJwtPayload {
-  sub: string;
-  email: string;
-}
-
-export function createSessionToken(user: SessionUser) {
-  return jwt.sign({ email: user.email }, env.AUTH_SECRET, {
-    subject: user.id,
-    expiresIn: "7d"
-  });
-}
-
-export function setSessionCookie(res: Response, user: SessionUser) {
-  res.cookie(SESSION_COOKIE, createSessionToken(user), {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: env.NODE_ENV === "production",
-    maxAge: 1000 * 60 * 60 * 24 * 7
-  });
-}
-
-export function clearSessionCookie(res: Response) {
-  res.clearCookie(SESSION_COOKIE, {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: env.NODE_ENV === "production"
-  });
-}
-
 function readSessionUser(req: Request): SessionUser | null {
-  const token = req.cookies?.[SESSION_COOKIE];
-  if (!token) {
+  const auth = getAuth(req);
+  if (!auth.userId) {
     return null;
   }
 
-  try {
-    const payload = jwt.verify(token, env.AUTH_SECRET) as SessionJwtPayload;
-    if (!payload.sub || !payload.email) {
-      return null;
-    }
+  const claims = auth.sessionClaims as Record<string, unknown> | undefined;
+  const emailClaim = claims?.email;
+  const emailAddressClaim = claims?.email_address;
+  const email =
+    typeof emailClaim === "string"
+      ? emailClaim
+      : typeof emailAddressClaim === "string"
+        ? emailAddressClaim
+        : "";
 
-    return { id: payload.sub, email: payload.email };
-  } catch {
-    return null;
-  }
+  return { id: auth.userId, email };
 }
 
 export function optionalSession(req: Request, _res: Response, next: NextFunction) {
