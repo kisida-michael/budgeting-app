@@ -1,10 +1,9 @@
 # Budget Rewrite
 
 ## Current Task
-- [x] Add app-level dark mode with persistent theme preference.
-- [x] Add transaction search and saved views on top of the existing filter model.
-- [x] Add a dashboard needs-attention panel for uncategorized, over-budget, and Plaid sync/account states.
-- [x] Keep the first-wave changes additive to the preserved UI structure and verify with lint, typecheck, and build.
+- [ ] Add an explicit `Save as Default` budget action that writes the reusable template without affecting the current month-specific flow.
+- [ ] Surface the default-template action in the preserved Budgets screen next to save/copy actions.
+- [ ] Verify the default-budget follow-up with lint, typecheck, and build.
 
 ## Active Plan
 - [x] Clone the original source repository into this project root.
@@ -78,3 +77,8 @@
 - Added a dashboard `Needs Attention` panel for uncategorized current-month transactions, over-budget categories, and Plaid connection/sync health.
 - Centralized dashboard filter application so search, saved views, chip removal, and reset all keep dashboard stats and saved-view state in sync.
 - Verified the first-wave frontend pass with `npm run lint`, `npm run typecheck`, and `npm run build`.
+- Added month-specific budget persistence via `budget_periods` while preserving the existing global `budgets` table as a fallback template source.
+- Extended the budget read model with derived `remaining`, `forecast`, `safeToSpend`, `isPeriodSpecific`, and `budgetContext` fields so the preserved UI can show richer budgeting metrics without changing the base contract shape.
+- Added `POST /api/budgets/copy-previous` and updated `PUT /api/budgets` to support month/year-scoped edits for copy-forward workflows.
+- Updated the preserved Budgets screen with summary cards, a copy-previous action, per-category remaining/forecast/safe-to-spend metrics, and stronger over-budget visual treatment.
+- Verified the budget pass with `npm run lint`, `npm run typecheck`, `npm run build`, `npm run db:migrate`, and a `tsx` smoke script covering copy-forward plus derived budget metrics.

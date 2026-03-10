@@ -2,6 +2,7 @@ import { Router } from "express";
 import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
 import { db } from "../db/client.js";
 import {
+  budgetPeriods,
   budgets,
   categories,
   configurations,
@@ -16,6 +17,7 @@ import {
   buildDashboardStats,
   buildSpendingBreakdown,
   commitTransactionsImport,
+  copyBudgetsFromPreviousPeriod,
   serializeTransaction,
   previewTransactionsImport,
   validateConfigurationPayload
@@ -267,11 +269,14 @@ router.get("/budget-limits", async (req, res) => {
 
 router.put("/budgets", async (req, res) => {
   const payload = Array.isArray(req.body?.budgets) ? req.body.budgets : [];
+  const month = req.body?.month ? Number(req.body.month) : null;
+  const year = req.body?.year ? Number(req.body.year) : null;
   const upserts = payload
     .filter((budget: Record<string, unknown>) => budget.limit !== null && budget.limit !== "")
     .map((budget: Record<string, unknown>) => ({
       userId: req.authUser!.id,
       categoryName: String(budget.categoryName),
+      ...(month && year ? { month, year } : {}),
       limit: String(Number(budget.limit))
     }));
 
@@ -279,26 +284,71 @@ router.put("/budgets", async (req, res) => {
     .filter((budget: Record<string, unknown>) => budget.limit === null || budget.limit === "")
     .map((budget: Record<string, unknown>) => String(budget.categoryName));
 
-  if (upserts.length > 0) {
-    await db
-      .insert(budgets)
-      .values(upserts)
-      .onConflictDoUpdate({
-        target: [budgets.userId, budgets.categoryName],
-        set: {
-          limit: sql`excluded.limit`,
-          updatedAt: new Date()
-        }
-      });
-  }
+  if (month && year) {
+    if (upserts.length > 0) {
+      await db
+        .insert(budgetPeriods)
+        .values(upserts)
+        .onConflictDoUpdate({
+          target: [
+            budgetPeriods.userId,
+            budgetPeriods.categoryName,
+            budgetPeriods.month,
+            budgetPeriods.year
+          ],
+          set: {
+            limit: sql`excluded.limit`,
+            updatedAt: new Date()
+          }
+        });
+    }
 
-  if (deletes.length > 0) {
-    await db
-      .delete(budgets)
-      .where(and(eq(budgets.userId, req.authUser!.id), inArray(budgets.categoryName, deletes)));
+    if (deletes.length > 0) {
+      await db
+        .delete(budgetPeriods)
+        .where(
+          and(
+            eq(budgetPeriods.userId, req.authUser!.id),
+            eq(budgetPeriods.month, month),
+            eq(budgetPeriods.year, year),
+            inArray(budgetPeriods.categoryName, deletes)
+          )
+        );
+    }
+  } else {
+    if (upserts.length > 0) {
+      await db
+        .insert(budgets)
+        .values(upserts)
+        .onConflictDoUpdate({
+          target: [budgets.userId, budgets.categoryName],
+          set: {
+            limit: sql`excluded.limit`,
+            updatedAt: new Date()
+          }
+        });
+    }
+
+    if (deletes.length > 0) {
+      await db
+        .delete(budgets)
+        .where(and(eq(budgets.userId, req.authUser!.id), inArray(budgets.categoryName, deletes)));
+    }
   }
 
   res.json({ ok: true });
+});
+
+router.post("/budgets/copy-previous", async (req, res) => {
+  const month = Number(req.body?.month);
+  const year = Number(req.body?.year);
+
+  if (!month || !year) {
+    res.status(400).json({ error: "month and year are required." });
+    return;
+  }
+
+  res.json(await copyBudgetsFromPreviousPeriod(req.authUser!.id, month, year));
 });
 
 router.get("/merchants", async (req, res) => {

@@ -124,6 +124,27 @@ export const budgets = pgTable(
   })
 );
 
+export const budgetPeriods = pgTable(
+  "budget_periods",
+  {
+    userId: text("user_id").notNull(),
+    categoryName: varchar("category_name", { length: 80 })
+      .references(() => categories.name, { onDelete: "cascade" })
+      .notNull(),
+    month: integer("month").notNull(),
+    year: integer("year").notNull(),
+    limit: numeric("limit", { precision: 12, scale: 2 }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull()
+  },
+  (table) => ({
+    pk: primaryKey({
+      columns: [table.userId, table.categoryName, table.month, table.year],
+      name: "budget_periods_pk"
+    })
+  })
+);
+
 export const merchants = pgTable(
   "merchants",
   {

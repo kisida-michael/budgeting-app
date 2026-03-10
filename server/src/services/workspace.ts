@@ -1,6 +1,7 @@
 import { and, asc, eq, inArray } from "drizzle-orm";
 import { db } from "../db/client.js";
 import {
+  budgetPeriods,
   budgets,
   categories,
   configurations,
@@ -418,21 +419,50 @@ export async function buildSpendingBreakdown(userId: string, year: number) {
 }
 
 export async function buildBudgets(userId: string, month: number, year: number) {
-  const [categoryRows, budgetRows, transactionRows] = await Promise.all([
+  const [categoryRows, templateBudgetRows, periodBudgetRows, transactionRows] = await Promise.all([
     getOrderedCategories(),
     db.query.budgets.findMany({ where: eq(budgets.userId, userId) }),
+    db.query.budgetPeriods.findMany({
+      where: and(eq(budgetPeriods.userId, userId), eq(budgetPeriods.month, month), eq(budgetPeriods.year, year))
+    }),
     getUserTransactionsForMonth(userId, month, year)
   ]);
 
+  const templateBudgetMap = new Map(
+    templateBudgetRows.map((budgetRow) => [budgetRow.categoryName, Number(budgetRow.limit)])
+  );
+  const periodBudgetMap = new Map(
+    periodBudgetRows.map((budgetRow) => [budgetRow.categoryName, Number(budgetRow.limit)])
+  );
   const categoricalSpending = getCategoricalSpending(transactionRows);
+  const now = new Date();
+  const isCurrentMonth = month === now.getMonth() + 1 && year === now.getFullYear();
+  const daysInMonth = new Date(year, month, 0).getDate();
+  const targetMonthIndex = year * 12 + (month - 1);
+  const currentMonthIndex = now.getFullYear() * 12 + now.getMonth();
+  const isPastMonth = targetMonthIndex < currentMonthIndex;
+  const isFutureMonth = targetMonthIndex > currentMonthIndex;
+  const daysElapsed = isCurrentMonth ? Math.min(now.getDate(), daysInMonth) : isPastMonth ? daysInMonth : 0;
+  const daysRemaining = isCurrentMonth ? Math.max(daysInMonth - now.getDate(), 0) : isFutureMonth ? daysInMonth : 0;
   let totalLimit = 0;
   let totalSpending = 0;
+  let totalRemaining = 0;
+  let totalForecast = 0;
+  let totalSafeToSpend = 0;
 
   const budgetViews = categoryRows.map((category) => {
-    const matchedBudget = budgetRows.find((budgetRow) => budgetRow.categoryName === category.name);
-    const limit = matchedBudget ? Number(matchedBudget.limit) : null;
+    const limit = periodBudgetMap.get(category.name) ?? templateBudgetMap.get(category.name) ?? null;
     const spending = categoricalSpending[category.name] ?? 0;
     const percentage = limit ? (spending / limit) * 100 : null;
+    const remaining = limit === null ? null : limit - spending;
+    const forecast =
+      ignoredCategoryNames.includes(category.name) || daysElapsed === 0
+        ? null
+        : Math.round(((spending / daysElapsed) * daysInMonth + Number.EPSILON) * 100) / 100;
+    const safeToSpend =
+      ignoredCategoryNames.includes(category.name) || limit === null || daysRemaining <= 0
+        ? null
+        : Math.round(((limit - spending) / Math.max(daysRemaining, 1) + Number.EPSILON) * 100) / 100;
 
     if (!ignoredCategoryNames.includes(category.name)) {
       if (limit) {
@@ -440,13 +470,24 @@ export async function buildBudgets(userId: string, month: number, year: number) 
       }
 
       totalSpending += spending;
+      totalRemaining += remaining ?? 0;
+      if (forecast !== null) {
+        totalForecast += forecast;
+      }
+      if (safeToSpend !== null) {
+        totalSafeToSpend += safeToSpend;
+      }
     }
 
     return {
       ...category,
       limit,
       spending,
-      percentage
+      percentage,
+      remaining,
+      forecast,
+      safeToSpend,
+      isPeriodSpecific: periodBudgetMap.has(category.name)
     };
   });
 
@@ -458,10 +499,65 @@ export async function buildBudgets(userId: string, month: number, year: number) 
     colorLight: "#ECFCCB",
     limit: totalLimit > 0 ? totalLimit : null,
     spending: totalSpending,
-    percentage: totalLimit > 0 ? (totalSpending / totalLimit) * 100 : null
+    percentage: totalLimit > 0 ? (totalSpending / totalLimit) * 100 : null,
+    remaining: totalLimit > 0 ? totalRemaining : null,
+    forecast: daysElapsed > 0 ? totalForecast : null,
+    safeToSpend: daysRemaining > 0 ? totalSafeToSpend : null,
+    isPeriodSpecific: periodBudgetRows.length > 0,
+    budgetContext: {
+      month,
+      year,
+      isCurrentMonth,
+      daysInMonth,
+      daysElapsed,
+      daysRemaining
+    }
   };
 
   return [totalBudget, ...budgetViews];
+}
+
+export async function copyBudgetsFromPreviousPeriod(userId: string, month: number, year: number) {
+  const previousMonth = month === 1 ? 12 : month - 1;
+  const previousYear = month === 1 ? year - 1 : year;
+
+  const [previousPeriodRows, templateBudgetRows] = await Promise.all([
+    db.query.budgetPeriods.findMany({
+      where: and(
+        eq(budgetPeriods.userId, userId),
+        eq(budgetPeriods.month, previousMonth),
+        eq(budgetPeriods.year, previousYear)
+      )
+    }),
+    db.query.budgets.findMany({
+      where: eq(budgets.userId, userId)
+    })
+  ]);
+
+  const sourceRows = previousPeriodRows.length > 0 ? previousPeriodRows : templateBudgetRows;
+
+  await db
+    .delete(budgetPeriods)
+    .where(and(eq(budgetPeriods.userId, userId), eq(budgetPeriods.month, month), eq(budgetPeriods.year, year)));
+
+  if (sourceRows.length > 0) {
+    await db.insert(budgetPeriods).values(
+      sourceRows.map((row) => ({
+        userId,
+        categoryName: row.categoryName,
+        month,
+        year,
+        limit: String(Number(row.limit))
+      }))
+    );
+  }
+
+  return {
+    copiedCount: sourceRows.length,
+    source: previousPeriodRows.length > 0 ? "previous-period" : "default-template",
+    previousMonth,
+    previousYear
+  };
 }
 
 function applyMerchantRules(

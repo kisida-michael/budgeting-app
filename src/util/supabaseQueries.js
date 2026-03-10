@@ -187,6 +187,8 @@ export const updateBudget = async (newBudgets) => {
 		await apiRequest("/api/budgets", {
 			method: "PUT",
 			body: JSON.stringify({
+				month: newBudgets?.budgetContext?.month ?? undefined,
+				year: newBudgets?.budgetContext?.year ?? undefined,
 				budgets: newBudgets
 					.filter((budget) => budget.name !== "Total")
 					.map((budget) => ({
@@ -199,6 +201,13 @@ export const updateBudget = async (newBudgets) => {
 	} catch {
 		return false;
 	}
+};
+
+export const copyPreviousBudget = async (month, year) => {
+	return await apiRequest("/api/budgets/copy-previous", {
+		method: "POST",
+		body: JSON.stringify({ month, year }),
+	});
 };
 
 export const getMerchantSettings = async () => {
