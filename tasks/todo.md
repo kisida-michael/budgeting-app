@@ -1,5 +1,10 @@
 # Budget Rewrite
 
+## Current Task
+- [x] Reproduce and fix the Clerk custom signup failure caused by missing CAPTCHA/state handling in the preserved login UI.
+- [x] Keep the preserved login/signup screen shape, but make verification resilient to failed or repeated attempts.
+- [x] Validate the fix with lint/build and a live local Clerk signup smoke test if the configured keys allow it.
+
 ## Active Plan
 - [x] Clone the original source repository into this project root.
 - [x] Create a dedicated rewrite branch for the new implementation.
@@ -56,3 +61,6 @@
 - Verified `npm run typecheck`, `npm run lint`, and `npm run build` after the Clerk swap.
 - Live Clerk session smoke tests are still blocked in this environment because `.env` does not yet contain `VITE_CLERK_PUBLISHABLE_KEY` or `CLERK_SECRET_KEY`.
 - Patched the Express Clerk bootstrap to fall back to `VITE_CLERK_PUBLISHABLE_KEY`, which fixed the local `500` on `/api/auth/whitelist` when only the Vite-prefixed publishable key was set.
+- Reworked the preserved custom signup flow onto Clerk v6's current sign-up resource, added the required `#clerk-captcha` mount, and made the verification step support resend, reset, and resume-after-refresh behavior.
+- Reloaded the Clerk sign-up resource before finalization so email-code verification no longer fails on stale local status, and now surface Clerk-required missing signup fields explicitly instead of a generic completion error.
+- Verified the follow-up auth pass with `npm run lint`, `npm run typecheck`, and `npm run build`.

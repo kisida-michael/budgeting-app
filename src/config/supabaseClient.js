@@ -70,6 +70,30 @@ const supabase = {
 				return createErrorResult(error);
 			}
 		},
+		async resendEmailCode() {
+			try {
+				await requireAdapter().resendEmailCode();
+				return { error: null };
+			} catch (error) {
+				return { error: { message: error instanceof Error ? error.message : String(error) } };
+			}
+		},
+		async resetSignUp() {
+			try {
+				await requireAdapter().resetSignUp();
+				return { error: null };
+			} catch (error) {
+				return { error: { message: error instanceof Error ? error.message : String(error) } };
+			}
+		},
+		async getPendingSignUp() {
+			try {
+				const pendingSignUp = await requireAdapter().getPendingSignUp();
+				return { data: { pendingSignUp }, error: null };
+			} catch (error) {
+				return { data: { pendingSignUp: null }, error: { message: error instanceof Error ? error.message : String(error) } };
+			}
+		},
 		async signOut() {
 			try {
 				await requireAdapter().signOut();
