@@ -24,6 +24,17 @@ import {
 } from "../services/workspace.js";
 
 const router = Router();
+const protectedCategoryNames = new Set(["Income", "Credits/Payments", "Uncategorized"]);
+const categoryColorPresets = [
+  { color: "rgb(220 252 231)", colorDark: "rgb(22 163 74)", colorLight: "rgb(240 253 244)" },
+  { color: "rgb(219 234 254)", colorDark: "rgb(37 99 235)", colorLight: "rgb(239 246 255)" },
+  { color: "rgb(254 240 138)", colorDark: "rgb(202 138 4)", colorLight: "rgb(254 249 195)" },
+  { color: "rgb(233 213 255)", colorDark: "rgb(147 51 234)", colorLight: "rgb(250 245 255)" },
+  { color: "rgb(254 215 170)", colorDark: "rgb(234 88 12)", colorLight: "rgb(255 237 213)" },
+  { color: "rgb(251 207 232)", colorDark: "rgb(219 39 119)", colorLight: "rgb(253 242 248)" },
+  { color: "rgb(191 219 254)", colorDark: "rgb(29 78 216)", colorLight: "rgb(239 246 255)" },
+  { color: "rgb(187 247 208)", colorDark: "rgb(21 128 61)", colorLight: "rgb(240 253 244)" }
+];
 
 router.use(requireSession);
 
@@ -37,6 +48,14 @@ function toSqlDate(input: string) {
   const month = `${parsed.getMonth() + 1}`.padStart(2, "0");
   const day = `${parsed.getDate()}`.padStart(2, "0");
   return `${year}-${month}-${day}`;
+}
+
+function normalizeCategoryName(value: unknown) {
+  return String(value ?? "").trim();
+}
+
+function getCategoryPreset(orderIndex: number) {
+  return categoryColorPresets[((orderIndex % categoryColorPresets.length) + categoryColorPresets.length) % categoryColorPresets.length];
 }
 
 router.get("/transactions", async (req, res) => {
@@ -251,6 +270,177 @@ router.get("/categories", async (_req, res) => {
     orderBy: [asc(categories.orderIndex)]
   });
   res.json(rows);
+});
+
+router.post("/categories", async (_req, res) => {
+  const name = normalizeCategoryName(_req.body?.name);
+  if (!name) {
+    res.status(400).json({ error: "Category name cannot be empty." });
+    return;
+  }
+
+  if (name.length > 80) {
+    res.status(400).json({ error: "Category name cannot be longer than 80 characters." });
+    return;
+  }
+
+  const existing = await db.query.categories.findFirst({
+    where: eq(categories.name, name)
+  });
+  if (existing) {
+    res.status(409).json({ error: "Category already exists." });
+    return;
+  }
+
+  const orderedCategories = await db.query.categories.findMany({
+    orderBy: [desc(categories.orderIndex)]
+  });
+  const nextOrderIndex = orderedCategories[0] ? orderedCategories[0].orderIndex + 1 : 0;
+  const preset = getCategoryPreset(nextOrderIndex);
+
+  await db.insert(categories).values({
+    name,
+    orderIndex: nextOrderIndex,
+    ...preset
+  });
+
+  res.json({ ok: true });
+});
+
+router.patch("/categories/reorder", async (req, res) => {
+  const orderedNames: string[] = Array.isArray(req.body?.orderedNames)
+    ? req.body.orderedNames.map((name: unknown) => String(name))
+    : [];
+
+  const categoryRows = await db.query.categories.findMany({
+    orderBy: [asc(categories.orderIndex)]
+  });
+  const activeCategories = categoryRows.filter((category) => category.archivedAt === null);
+  const archivedCategories = categoryRows.filter((category) => category.archivedAt !== null);
+
+  if (
+    orderedNames.length !== activeCategories.length ||
+    orderedNames.some((name) => !activeCategories.some((category) => category.name === name))
+  ) {
+    res.status(400).json({ error: "orderedNames must contain every active category exactly once." });
+    return;
+  }
+
+  const reorderedCategories = [
+    ...orderedNames
+      .map((name: string) => activeCategories.find((category) => category.name === name))
+      .filter((category): category is (typeof activeCategories)[number] => Boolean(category)),
+    ...archivedCategories
+  ];
+
+  await db.transaction(async (tx) => {
+    await Promise.all(
+      reorderedCategories.map((category, index) =>
+        tx
+          .update(categories)
+          .set({ orderIndex: 1000 + index })
+          .where(eq(categories.name, category.name))
+      )
+    );
+
+    await Promise.all(
+      reorderedCategories.map((category, index) =>
+        tx
+          .update(categories)
+          .set({ orderIndex: index })
+          .where(eq(categories.name, category.name))
+      )
+    );
+  });
+
+  res.json({ ok: true });
+});
+
+router.patch("/categories/:name", async (req, res) => {
+  const currentName = decodeURIComponent(req.params.name);
+  const nextName = normalizeCategoryName(req.body?.nextName);
+  const hasRename = nextName.length > 0 && nextName !== currentName;
+  const archived =
+    typeof req.body?.archived === "boolean" ? Boolean(req.body.archived) : null;
+
+  const existingCategory = await db.query.categories.findFirst({
+    where: eq(categories.name, currentName)
+  });
+
+  if (!existingCategory) {
+    res.status(404).json({ error: "Category not found." });
+    return;
+  }
+
+  if (protectedCategoryNames.has(currentName) && (hasRename || archived === true)) {
+    res.status(400).json({ error: "This category is protected and cannot be renamed or archived." });
+    return;
+  }
+
+  if (hasRename && nextName.length > 80) {
+    res.status(400).json({ error: "Category name cannot be longer than 80 characters." });
+    return;
+  }
+
+  if (hasRename) {
+    const duplicate = await db.query.categories.findFirst({
+      where: eq(categories.name, nextName)
+    });
+    if (duplicate) {
+      res.status(409).json({ error: "Category already exists." });
+      return;
+    }
+  }
+
+  const finalName = hasRename ? nextName : currentName;
+  const maxOrderIndexRow = await db.query.categories.findMany({
+    orderBy: [desc(categories.orderIndex)],
+    limit: 1
+  });
+  const temporaryOrderIndex = (maxOrderIndexRow[0]?.orderIndex ?? 0) + 1;
+
+  await db.transaction(async (tx) => {
+    if (hasRename) {
+      await tx.insert(categories).values({
+        name: nextName,
+        orderIndex: temporaryOrderIndex,
+        color: existingCategory.color,
+        colorDark: existingCategory.colorDark,
+        colorLight: existingCategory.colorLight,
+        archivedAt: archived === null ? existingCategory.archivedAt : archived ? new Date() : null
+      });
+
+      await tx
+        .update(transactions)
+        .set({ categoryName: nextName, updatedAt: new Date() })
+        .where(eq(transactions.categoryName, currentName));
+      await tx
+        .update(merchants)
+        .set({ categoryName: nextName, updatedAt: new Date() })
+        .where(eq(merchants.categoryName, currentName));
+      await tx
+        .update(budgets)
+        .set({ categoryName: nextName, updatedAt: new Date() })
+        .where(eq(budgets.categoryName, currentName));
+      await tx
+        .update(budgetPeriods)
+        .set({ categoryName: nextName, updatedAt: new Date() })
+        .where(eq(budgetPeriods.categoryName, currentName));
+
+      await tx.delete(categories).where(eq(categories.name, currentName));
+      await tx
+        .update(categories)
+        .set({ orderIndex: existingCategory.orderIndex })
+        .where(eq(categories.name, nextName));
+    } else if (archived !== null) {
+      await tx
+        .update(categories)
+        .set({ archivedAt: archived ? new Date() : null })
+        .where(eq(categories.name, currentName));
+    }
+  });
+
+  res.json({ ok: true, categoryName: finalName });
 });
 
 router.get("/budget-limits", async (req, res) => {

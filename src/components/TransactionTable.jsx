@@ -19,6 +19,7 @@ import TableSorter from "./TableSorter";
 import FilterButtons from "./FilterButtons";
 import Pagination from "./Pagination";
 import BulkActions from "./BulkActions";
+import { getCategoryChipStyle } from "../util/themeStyles";
 
 const TransactionTable = ({ transactions, setTransactions, transactionsLoading }) => {
 	const {
@@ -33,6 +34,7 @@ const TransactionTable = ({ transactions, setTransactions, transactionsLoading }
 		activeSavedView,
 		setActiveSavedView,
 		fetchBudgets,
+		theme,
 	} = useDataStore((state) => ({
 		categories: state.categories,
 		categoriesLoading: state.categoriesLoading,
@@ -46,6 +48,7 @@ const TransactionTable = ({ transactions, setTransactions, transactionsLoading }
 		activeSavedView: state.activeSavedView,
 		setActiveSavedView: state.setActiveSavedView,
 		fetchBudgets: state.fetchBudgets,
+		theme: state.theme,
 	}));
 	const { openUploadModal, closeCategoryMenu } = useAnimationStore((state) => ({
 		openUploadModal: state.openUploadModal,
@@ -186,8 +189,11 @@ const TransactionTable = ({ transactions, setTransactions, transactionsLoading }
 	};
 
 	return (
-		<div ref={tableRef} className="w-full grow flex flex-col bg-white border border-slate-300 rounded-2xl">
-			<div className="flex flex-col gap-3 px-5 py-3 border-b border-slate-200">
+		<div
+			ref={tableRef}
+			className="w-full grow flex flex-col bg-white border border-slate-300 rounded-2xl dark:border-slate-700 dark:bg-slate-950/70"
+		>
+			<div className="flex flex-col gap-3 px-5 py-3 border-b border-slate-200 dark:border-slate-800">
 				<div className="flex items-center justify-between gap-3">
 					<div className="flex gap-2">
 					{localTransactions?.some((t) => t.selected) && (
@@ -196,7 +202,7 @@ const TransactionTable = ({ transactions, setTransactions, transactionsLoading }
 								onClick={() =>
 									setLocalTransactions(localTransactions.map((t) => ({ ...t, selected: false })))
 								}
-								className="font-normal hover:bg-slate-50 border border-slate-200 rounded text-sm p-1"
+								className="font-normal hover:bg-slate-50 border border-slate-200 rounded text-sm p-1 dark:border-slate-700 dark:hover:bg-slate-900"
 							>
 								<div className="w-4" style={{ padding: "0.2rem" }}>
 									<img src="./close.svg" className="w-full" />
@@ -207,10 +213,10 @@ const TransactionTable = ({ transactions, setTransactions, transactionsLoading }
 								localTransactions={localTransactions}
 								setLocalTransactions={setLocalTransactions}
 							/>
-							<div className="w-[2px] bg-gray-300"></div>
+							<div className="w-[2px] bg-gray-300 dark:bg-slate-700"></div>
 						</>
 					)}
-						<span className="text-lg text-slate-600 font-semibold flex justify-start items-center">
+						<span className="text-lg text-slate-600 font-semibold flex justify-start items-center dark:text-slate-100">
 							Transactions
 						</span>
 					</div>
@@ -219,13 +225,13 @@ const TransactionTable = ({ transactions, setTransactions, transactionsLoading }
 							onClick={() => {
 								setShowFilters(!showFilters);
 							}}
-							className="border-slate-200 text-slate-500 hover:bg-slate-50 text-sm font-normal px-2 py-1 border-slate-300 border rounded"
+							className="border-slate-200 text-slate-500 hover:bg-slate-50 text-sm font-normal px-2 py-1 border-slate-300 border rounded dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-900"
 						>
 							{showFilters ? "Hide Filters" : "Show Filters"}
 						</button>
 						<button
 							onClick={openUploadModal}
-							className="relative font-normal text-slate-600 bg-cGreen-light hover:bg-cGreen-lightHover border border-slate-300 rounded text-sm py-1 px-3"
+							className="relative font-normal text-slate-600 bg-cGreen-light hover:bg-cGreen-lightHover border border-slate-300 rounded text-sm py-1 px-3 dark:border-cGreen/40 dark:bg-cGreen dark:text-slate-950 dark:hover:bg-cGreen-light"
 						>
 							Upload
 						</button>
@@ -239,8 +245,8 @@ const TransactionTable = ({ transactions, setTransactions, transactionsLoading }
 								onClick={() => applySavedView(savedView)}
 								className={`rounded-full border px-3 py-1 text-sm ${
 									activeSavedView === savedView.key
-										? "border-cGreen bg-cGreen-light text-slate-700"
-										: "border-slate-200 text-slate-500 hover:bg-slate-50"
+										? "border-cGreen bg-cGreen-light text-slate-700 dark:border-cGreen/40 dark:bg-cGreen/15 dark:text-cGreen-light"
+										: "border-slate-200 text-slate-500 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-900"
 								}`}
 							>
 								{savedView.label}
@@ -252,7 +258,7 @@ const TransactionTable = ({ transactions, setTransactions, transactionsLoading }
 							value={searchInput}
 							onChange={(e) => setSearchInput(e.target.value)}
 							placeholder="Search merchant, category, config, date, amount"
-							className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-slate-400"
+							className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-slate-400 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-slate-500"
 						/>
 					</div>
 				</div>
@@ -262,14 +268,14 @@ const TransactionTable = ({ transactions, setTransactions, transactionsLoading }
 				className={`${showFilters ? "mb-3" : "overflow-hidden"} relative transition-[max-height] duration-200`}
 			>
 				<div className="w-full px-5">
-					<div className="border border-slate-300 rounded-lg p-2 flex justify-between items-center">
+					<div className="border border-slate-300 rounded-lg p-2 flex justify-between items-center dark:border-slate-700 dark:bg-slate-950/70">
 						<div className="flex flex-wrap gap-2">
 							{filters.map((filter, index) => (
 								<div
 									key={index}
-									className="border border-slate-200 py-1.5 px-2 rounded flex items-center gap-1 shrink-0"
+									className="border border-slate-200 py-1.5 px-2 rounded flex items-center gap-1 shrink-0 dark:border-slate-700 dark:bg-slate-900/70"
 								>
-									<span className="text-slate-600 font-semibold">{filter.type}: </span>
+									<span className="text-slate-600 font-semibold dark:text-slate-200">{filter.type}: </span>
 									{filter.type === "Date" && (
 										<span>{`${filter.start.month}/${filter.start.day}/${filter.start.year} to ${filter.end.month}/${filter.end.day}/${filter.end.year}`}</span>
 									)}
@@ -277,8 +283,12 @@ const TransactionTable = ({ transactions, setTransactions, transactionsLoading }
 									{filter.type === "Search" && <span>{filter.query}</span>}
 									{filter.type === "Category" && (
 										<span
-											className="text-slate-600 px-1.5 rounded"
-											style={{ backgroundColor: filter.category.color }}
+											className="px-1.5 rounded text-sm font-medium"
+											style={getCategoryChipStyle({
+												color: filter.category.color,
+												colorDark: filter.category.colorDark,
+												theme,
+											})}
 										>
 											{filter.category.name}
 										</span>
@@ -304,7 +314,7 @@ const TransactionTable = ({ transactions, setTransactions, transactionsLoading }
 												setActiveSavedView,
 											});
 										}}
-										className="hover:bg-slate-100 h-full"
+										className="h-full hover:bg-slate-100 dark:hover:bg-slate-800"
 									>
 										<img className="w-3" src="./close.svg" />
 									</button>
@@ -317,7 +327,7 @@ const TransactionTable = ({ transactions, setTransactions, transactionsLoading }
 					</div>
 				</div>
 			</div>
-			<div className="bg-slate-100 py-3 px-4 w-full flex box-border">
+			<div className="bg-slate-100 py-3 px-4 w-full flex box-border dark:border-b dark:border-slate-800 dark:bg-slate-950">
 				<div className="font-semibold w-[3%] flex justify-center items-center">
 					<input
 						checked={(localTransactions?.every((t) => t.selected) && localTransactions.length > 0) || false}
@@ -332,19 +342,19 @@ const TransactionTable = ({ transactions, setTransactions, transactionsLoading }
 						type="checkbox"
 					/>
 				</div>
-				<div className="font-semibold w-[11%] px-2 flex justify-between items-center">
+				<div className="font-semibold w-[11%] px-2 flex justify-between items-center dark:text-slate-200">
 					<span>Date</span>
 					<TableSorter column={"date"} sortState={dashboardSortState} onSorterClick={onSorterClick} />
 				</div>
-				<div className="font-semibold w-[35%] px-2 flex justify-between items-center">
+				<div className="font-semibold w-[35%] px-2 flex justify-between items-center dark:text-slate-200">
 					<span>Merchant</span>
 					<TableSorter column={"merchant"} sortState={dashboardSortState} onSorterClick={onSorterClick} />
 				</div>
-				<div className="font-semibold w-[20%] px-2 flex justify-between items-center">
+				<div className="font-semibold w-[20%] px-2 flex justify-between items-center dark:text-slate-200">
 					<span>Category</span>
 					<TableSorter column={"categoryName"} sortState={dashboardSortState} onSorterClick={onSorterClick} />
 				</div>
-				<div className="font-semibold w-[16%] px-2 flex justify-between items-center">
+				<div className="font-semibold w-[16%] px-2 flex justify-between items-center dark:text-slate-200">
 					<span>Configuration</span>
 					<TableSorter
 						column={"configurationName"}
@@ -352,7 +362,7 @@ const TransactionTable = ({ transactions, setTransactions, transactionsLoading }
 						onSorterClick={onSorterClick}
 					/>
 				</div>
-				<div className="font-semibold w-[11%] px-2 flex justify-between items-center">
+				<div className="font-semibold w-[11%] px-2 flex justify-between items-center dark:text-slate-200">
 					<span>Amount</span>
 					<TableSorter column={"amount"} sortState={dashboardSortState} onSorterClick={onSorterClick} />
 				</div>
@@ -373,7 +383,7 @@ const TransactionTable = ({ transactions, setTransactions, transactionsLoading }
 											: localTransactions.length - 1)
 											? "border-b"
 											: ""
-									} border-slate-200 w-full flex items-center py-3 px-4 flex box-border`}
+									} border-slate-200 w-full flex items-center py-3 px-4 flex box-border dark:border-slate-800 dark:text-slate-300`}
 								>
 									<div className={`w-[3%] flex items-center justify-center`}>
 										<input
@@ -415,7 +425,9 @@ const TransactionTable = ({ transactions, setTransactions, transactionsLoading }
 									</div>
 									<div
 										className={`${
-											transaction.amount.toFixed(2).includes("-") ? "text-cGreen-dark" : ""
+											transaction.amount.toFixed(2).includes("-")
+												? "text-cGreen-dark dark:text-cGreen-light"
+												: ""
 										} ${transaction.ignored ? "opacity-30" : ""} w-[11%] px-2`}
 									>
 										{transaction.amount.toFixed(2)}
@@ -427,13 +439,13 @@ const TransactionTable = ({ transactions, setTransactions, transactionsLoading }
 							))}
 
 					{transactionsLoading && (
-						<div className="flex relative justify-center text-sm text-slate-300 items-center p-5 opacity-80">
+						<div className="flex relative justify-center text-sm text-slate-300 items-center p-5 opacity-80 dark:text-slate-500">
 							<ButtonSpinner />
 						</div>
 					)}
 
 					{!transactionsLoading && localTransactions?.length === 0 && (
-						<div className="flex grow items-center justify-center px-5 py-12 text-sm text-slate-500">
+						<div className="flex grow items-center justify-center px-5 py-12 text-sm text-slate-500 dark:text-slate-400">
 							No transactions match the current filters.
 						</div>
 					)}

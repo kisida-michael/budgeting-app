@@ -2,6 +2,7 @@ import { useDataStore } from "../util/dataStore";
 import { upsertMerchantSetting, getMerchantSettings } from "../util/supabaseQueries";
 import ButtonSpinner from "./ButtonSpinner";
 import PropTypes from "prop-types";
+import { getActiveCategories } from "../util/categorySelections";
 
 const MerchantSettingsItemCreate = ({ loading, setLoading }) => {
 	const {
@@ -64,7 +65,7 @@ const MerchantSettingsItemCreate = ({ loading, setLoading }) => {
 	return (
 		<>
 			{editingMerchantSetting !== null && (
-				<div className="w-full border border-cGreen p-3 rounded-lg flex flex-col gap-2">
+				<div className="w-full border border-cGreen p-3 rounded-lg flex flex-col gap-2 dark:border-cGreen/40 dark:bg-slate-900/70 dark:text-slate-200">
 					<div className="flex flex-col gap-2">
 						<div className="grow flex flex-col gap-2">
 							<div className="w-full">
@@ -78,14 +79,14 @@ const MerchantSettingsItemCreate = ({ loading, setLoading }) => {
 												type: e.target.value,
 											})
 										}
-										className="border border-slate-300 text-sm rounded outline-none p-1 bg-white"
+										className="border border-slate-300 text-sm rounded outline-none p-1 bg-white dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
 									>
 										<option value="contains">contains</option>
 										<option value="equals">equals</option>
 									</select>
 									<input
 										maxLength="60"
-										className="grow border border-slate-300 px-1 py-0.5 text-sm rounded outline-none"
+										className="grow border border-slate-300 px-1 py-0.5 text-sm rounded outline-none dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
 										value={editingMerchantSetting.text}
 										onChange={(e) =>
 											setEditingMerchantSetting({
@@ -110,9 +111,9 @@ const MerchantSettingsItemCreate = ({ loading, setLoading }) => {
 											},
 										})
 									}
-									className="border border-slate-300 text-sm rounded outline-none p-1 bg-white"
+									className="border border-slate-300 text-sm rounded outline-none p-1 bg-white dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
 								>
-									{categories.map((category) => (
+									{getActiveCategories(categories).map((category) => (
 										<option key={category.name} value={category.name}>
 											{category.name}
 										</option>
@@ -123,7 +124,7 @@ const MerchantSettingsItemCreate = ({ loading, setLoading }) => {
 						<div className="flex justify-end">
 							<div className="flex items-center gap-2">
 								<button
-									className="relative bg-blue-100 py-1 px-2 bg-cGreen-light border border-slate-300 rounded text-sm text-slate-700 p-1"
+									className="relative py-1 px-2 bg-cGreen-light border border-slate-300 rounded text-sm text-slate-700 p-1 dark:border-cGreen/40 dark:bg-cGreen dark:text-slate-950 dark:hover:bg-cGreen-light"
 									onClick={onClickSave}
 								>
 									<span className={`${loading.create ? "opacity-0" : ""}`}>Save</span>

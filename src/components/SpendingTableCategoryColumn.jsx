@@ -1,8 +1,12 @@
 import { ignoredCategories } from "../constants/Categories";
 import { Fragment } from "react";
 import PropTypes from "prop-types";
+import { useDataStore } from "../util/dataStore";
+import { getCategoryChipStyle } from "../util/themeStyles";
 
 const SpendingTableCategoryColumn = ({ categories, isFirstColumn }) => {
+	const theme = useDataStore((state) => state.theme);
+
 	return (
 		<div className="min-w-56 h-full flex flex-col justify-between">
 			<div
@@ -22,10 +26,11 @@ const SpendingTableCategoryColumn = ({ categories, isFirstColumn }) => {
 						<div className={`flex justify-start items-center grow px-2 min-h-11 py-1`} key={category.name}>
 							<div
 								className="inline-block py-1 px-2 rounded-md font-normal"
-								style={{
-									backgroundColor: category.color,
-									outline: `1px solid ${category.colorDark}`,
-								}}
+								style={getCategoryChipStyle({
+									color: category.color,
+									colorDark: category.colorDark,
+									theme,
+								})}
 							>
 								{category.name}
 							</div>
@@ -50,10 +55,11 @@ const SpendingTableCategoryColumn = ({ categories, isFirstColumn }) => {
 						<div className="flex justify-start items-center grow px-2 py-0.5 min-h-11" key={category.name}>
 							<div
 								className="inline-block py-0.5 px-2 rounded-md font-normal"
-								style={{
-									backgroundColor: category.color,
-									outline: `1px solid ${category.colorDark}`,
-								}}
+								style={getCategoryChipStyle({
+									color: category.color,
+									colorDark: category.colorDark,
+									theme,
+								})}
 							>
 								{category.name}
 							</div>

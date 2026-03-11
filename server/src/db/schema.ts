@@ -24,6 +24,7 @@ export const categories = pgTable(
     color: text("color").notNull(),
     colorDark: text("color_dark").notNull(),
     colorLight: text("color_light").notNull(),
+    archivedAt: timestamp("archived_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull()
   },
   (table) => ({

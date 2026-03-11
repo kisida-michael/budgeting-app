@@ -29,6 +29,13 @@
       "when": 1773185998387,
       "tag": "0003_shallow_obadiah_stane",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1773189986008,
+      "tag": "0004_mean_frightful_four",
+      "breakpoints": true
     }
   ]
 }

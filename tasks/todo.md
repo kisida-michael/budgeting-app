@@ -1,9 +1,10 @@
 # Budget Rewrite
 
 ## Current Task
-- [x] Extend the Plaid status payload with cached account details and clearer sync-health metadata.
-- [x] Update the preserved dashboard Plaid card to show connected accounts, cached balances, and per-item sync status without adding paid Plaid products.
-- [x] Keep the Plaid visibility pass additive to the current dashboard layout and verify with lint, typecheck, and build.
+- [x] Improve dark mode contrast on the Budgets screen, including category chips, progress rails, summary cards, and disabled actions.
+- [x] Improve dark mode contrast on the dashboard Plaid card and needs-attention badges.
+- [x] Improve dark mode contrast on the Transactions table header, saved-view pills, search input, and category chips.
+- [x] Verify the dark-mode polish pass with lint, typecheck, and build.
 
 ## Active Plan
 - [x] Clone the original source repository into this project root.
@@ -89,3 +90,16 @@
 - Updated the preserved dashboard Plaid card to show account rows with mask, subtype, cached current/available balances, and per-institution sync-health badges while preserving the existing card placement and actions.
 - Tightened the dashboard attention panel so Plaid warnings now respect item-level `pending` and `stale` sync states instead of only the latest top-level timestamp.
 - Verified the Plaid visibility pass with `npm run lint`, `npm run typecheck`, and `npm run build`.
+- Added Settings-side category management with create, rename, reorder, archive, and restore actions plus active/archived sections.
+- Added backend category mutation routes and safe rename propagation across transactions, merchant rules, default budgets, and month-specific budget periods.
+- Added `archived_at` to categories and filtered archived categories out of transaction recategorization, bulk categorize, merchant rule assignment, and category filter menus while keeping existing historical categories intact for display.
+- Verified the category-management pass with `npm run lint`, `npm run typecheck`, `npm run db:generate`, `npm run db:migrate`, and `npm run build`.
+- Tightened dark-mode surfaces on the Budgets screen, dashboard Plaid card, needs-attention cards, and transaction table controls instead of relying on broad generic background inversions.
+- Added theme-aware category chip and budget-rail styling so category colors stay identifiable in dark mode without washing out text contrast.
+- Improved dark-mode button, filter-chip, search-input, account-card, and disabled-state contrast across the preserved dashboard and budgets workflows.
+- Fixed the follow-up dark-mode regression where category chip text disappeared on accent fills, and applied the same chip helper to Settings-side category management.
+- Toned down dark-mode budget progress fills so they read as accents instead of neon bars against the slate surfaces.
+- Switched budget rails to a neutral dark track so non-total categories no longer render as full-width accent bars.
+- Applied the shared dark-mode category chip styling to Spending and Merchants so category pills stay readable anywhere category colors appear.
+- Tightened the Merchants settings pane controls, search field, empty states, and edit/create cards for dark mode.
+- Verified the dark-mode polish pass with `npm run lint`, `npm run typecheck`, and `npm run build`.

@@ -6,6 +6,7 @@ import { getDashboardStats } from "../util/statsUtil";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faList } from "@fortawesome/free-solid-svg-icons";
 import PropTypes from "prop-types";
+import { getActiveCategories } from "../util/categorySelections";
 
 const BulkActions = ({ localTransactions, setLocalTransactions }) => {
 	const { bulkActionsMenuVisible, bulkActionsMenuAnimating, openBulkActionsMenu, closeBulkActionsMenu } =
@@ -123,7 +124,7 @@ const BulkActions = ({ localTransactions, setLocalTransactions }) => {
 									>
 										<img src="./back.svg" className=" w-full" />
 									</button>
-									{categories.map((category) => (
+									{getActiveCategories(categories).map((category) => (
 										<button
 											key={category.name}
 											className=" w-full text-xs text-slate-600 px-1 py-0.5 rounded"

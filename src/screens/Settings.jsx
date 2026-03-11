@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useDataStore } from "../util/dataStore";
 import ConfigurationCreator from "../components/ConfigurationCreator";
+import CategorySettings from "../components/CategorySettings";
 import MerchantSettings from "../components/MerchantSettings";
 import Uploads from "../components/Uploads";
 import Navbar from "../components/Navbar";
@@ -12,7 +13,7 @@ const Settings = () => {
 		activeSetting: state.activeSetting,
 		setActiveSetting: state.setActiveSetting,
 	}));
-	const settings = ["Configurations", "Merchants", "Uploads"];
+	const settings = ["Configurations", "Categories", "Merchants", "Uploads"];
 
 	useEffect(() => {
 		if (activeSetting === null) setActiveSetting(settings[0]);
@@ -27,6 +28,7 @@ const Settings = () => {
 				<SettingsNavBar settings={settings} activeSetting={activeSetting} setActiveSetting={setActiveSetting} />
 				<div className="grow h-full flex bg-white border border-slate-300 rounded-2xl">
 					{(activeSetting === "Configurations" || activeSetting === null) && <ConfigurationCreator />}
+					{activeSetting === "Categories" && <CategorySettings />}
 					{activeSetting === "Merchants" && <MerchantSettings />}
 					{activeSetting === "Uploads" && <Uploads />}
 				</div>

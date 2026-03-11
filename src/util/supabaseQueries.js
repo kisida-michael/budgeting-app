@@ -174,6 +174,51 @@ export const getCategories = async () => {
 	}
 };
 
+export const createCategory = async (name) => {
+	try {
+		await apiRequest("/api/categories", {
+			method: "POST",
+			body: JSON.stringify({ name }),
+		});
+		return { success: true, error: null };
+	} catch (error) {
+		return {
+			success: false,
+			error: error instanceof Error ? error.message : "Could not create category.",
+		};
+	}
+};
+
+export const updateCategory = async (name, patch) => {
+	try {
+		await apiRequest(`/api/categories/${encodeURIComponent(name)}`, {
+			method: "PATCH",
+			body: JSON.stringify(patch),
+		});
+		return { success: true, error: null };
+	} catch (error) {
+		return {
+			success: false,
+			error: error instanceof Error ? error.message : "Could not update category.",
+		};
+	}
+};
+
+export const reorderCategories = async (orderedNames) => {
+	try {
+		await apiRequest("/api/categories/reorder", {
+			method: "PATCH",
+			body: JSON.stringify({ orderedNames }),
+		});
+		return { success: true, error: null };
+	} catch (error) {
+		return {
+			success: false,
+			error: error instanceof Error ? error.message : "Could not reorder categories.",
+		};
+	}
+};
+
 export const getSpending = async (year) => {
 	return await apiRequest(`/api/spending?year=${year}`);
 };

@@ -1,6 +1,7 @@
 import PropTypes from "prop-types";
 import { useDataStore } from "../../util/dataStore";
 import { applyDashboardFilters } from "../../util/dashboardFilters";
+import { getActiveCategories } from "../../util/categorySelections";
 
 const CategoryFilterMenu = ({ setSelectedFilterOptions }) => {
 	const { transactions, filters, setFilters, setDashboardStats, categories, setActiveSavedView } = useDataStore((state) => ({
@@ -14,7 +15,7 @@ const CategoryFilterMenu = ({ setSelectedFilterOptions }) => {
 
 	return (
 		<div className="flex flex-col gap-1 px-2 pb-1.5">
-			{categories.map((category) => (
+			{getActiveCategories(categories).map((category) => (
 				<button
 					key={category.name}
 					className="add-filter-option w-full text-xs text-slate-600 px-1 py-0.5 rounded"

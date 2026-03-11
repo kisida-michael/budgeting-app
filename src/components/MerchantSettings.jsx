@@ -78,13 +78,13 @@ const MerchantSettings = () => {
 		<div className="grow flex flex-col">
 			<div className="grow overflow-y-auto p-6">
 				<div className="flex justify-between items-center flex-wrap mb-3">
-					<div className="text-lg text-slate-600 font-semibold">Merchants</div>
-					<div className="w-52 flex items-center border border-slate-300 rounded p-0.5">
+					<div className="text-lg text-slate-600 font-semibold dark:text-slate-100">Merchants</div>
+					<div className="w-52 flex items-center border border-slate-300 rounded p-0.5 dark:border-slate-700 dark:bg-slate-950">
 						<input
 							value={merchantSearch}
 							onChange={(e) => setMerchantSearch(e.target.value)}
 							placeholder="Search merchants"
-							className="grow text-xs outline-none bg-transparent pl-1"
+							className="grow text-xs outline-none bg-transparent pl-1 dark:text-slate-100 dark:placeholder:text-slate-500"
 						></input>
 						<div className="w-5 p-0.5 mr-0.5">
 							<img src="./search.svg" className="w-full h-full" />
@@ -102,7 +102,7 @@ const MerchantSettings = () => {
 				</div> */}
 				<div className="flex flex-col gap-3">
 					{merchantSettings?.length === 0 && editingMerchantSetting?.id !== -1 && (
-						<div className="w-full border border-slate-300 rounded flex justify-center items-center py-3">
+						<div className="w-full border border-slate-300 rounded flex justify-center items-center py-3 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-400">
 							{"No merchants saved :("}
 						</div>
 					)}
@@ -113,7 +113,7 @@ const MerchantSettings = () => {
 						))}
 					{merchantSettings?.filter((m) => m.text.toLowerCase().includes(merchantSearch.toLowerCase()))
 						.length === 0 && (
-						<div className="w-full border border-slate-300 rounded flex justify-center items-center py-3">
+						<div className="w-full border border-slate-300 rounded flex justify-center items-center py-3 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-400">
 							{"No search results found :("}
 						</div>
 					)}
@@ -123,10 +123,10 @@ const MerchantSettings = () => {
 				</div>
 				<div ref={bottomRef}></div>
 			</div>
-			<div className="border-t border-slate-300 w-full flex justify-between px-8 py-4">
+			<div className="border-t border-slate-300 w-full flex justify-between px-8 py-4 dark:border-slate-800 dark:bg-slate-950/40">
 				<button
 					onClick={onClickApplyToExisting}
-					className="border-slate-200 relative text-slate-500 hover:bg-slate-50 text-sm font-normal px-2 py-1 border-slate-300 border rounded"
+					className="border-slate-200 relative text-slate-500 hover:bg-slate-50 text-sm font-normal px-2 py-1 border-slate-300 border rounded dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-950"
 				>
 					<span className={`${loading.apply ? "opacity-0" : ""}`}>Apply to Existing Transactions</span>
 					{loading.apply && <ButtonSpinner />}
@@ -135,14 +135,14 @@ const MerchantSettings = () => {
 					<div className="flex justify-start items-start">
 						<button
 							onClick={onClickCreate}
-							className="border-slate-200 text-slate-500 hover:bg-slate-50 text-sm font-normal px-2 py-1 border-slate-300 border rounded"
+							className="border-slate-200 text-slate-500 hover:bg-slate-50 text-sm font-normal px-2 py-1 border-slate-300 border rounded dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-950"
 						>
 							Cancel
 						</button>
 					</div>
 				) : (
 					<button
-						className="relative bg-blue-100 py-1 px-2 bg-cGreen-light border border-slate-300 rounded text-sm text-slate-700 p-1"
+						className="relative py-1 px-2 bg-cGreen-light border border-slate-300 rounded text-sm text-slate-700 p-1 dark:border-cGreen/40 dark:bg-cGreen dark:text-slate-950 dark:hover:bg-cGreen-light"
 						onClick={onClickCreate}
 					>
 						Create

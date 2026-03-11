@@ -31,15 +31,15 @@ const formatBalance = (value, currencyCode = "USD") => {
 const syncStateConfig = {
 	healthy: {
 		label: "Healthy",
-		className: "border-cGreen-light bg-cGreen-light/40 text-slate-700",
+		className: "border-cGreen-light bg-cGreen-light/40 text-slate-700 dark:border-cGreen/40 dark:bg-cGreen/15 dark:text-cGreen-light",
 	},
 	stale: {
 		label: "Stale",
-		className: "border-amber-300 bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:border-amber-700",
+		className: "border-amber-300 bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:border-amber-700 dark:text-amber-200",
 	},
 	pending: {
 		label: "Pending sync",
-		className: "border-slate-200 bg-slate-50 text-slate-500",
+		className: "border-slate-200 bg-slate-50 text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300",
 	},
 };
 
@@ -175,10 +175,12 @@ const PlaidConnectionCard = () => {
 	};
 
 	return (
-		<div className="w-full bg-white border border-slate-300 rounded-2xl p-5 flex flex-col gap-4">
+		<div className="w-full bg-white border border-slate-300 rounded-2xl p-5 flex flex-col gap-4 dark:border-slate-700 dark:bg-slate-950/70">
 			<div className="flex justify-between items-start gap-4">
 				<div>
-					<div className="text-lg text-slate-600 font-semibold mb-1">Bank Connections</div>
+					<div className="text-lg text-slate-600 font-semibold mb-1 dark:text-slate-100">
+						Bank Connections
+					</div>
 					<div className="text-slate-500 text-sm">
 						{status.available
 							? status.connectedItems > 0
@@ -202,8 +204,10 @@ const PlaidConnectionCard = () => {
 						onClick={() => handleSync()}
 						disabled={!status.available || status.connectedItems === 0 || loading !== null}
 						className={`${
-							!status.available || status.connectedItems === 0 || loading !== null ? "opacity-50 cursor-default" : ""
-						} relative border-slate-200 text-slate-500 hover:bg-slate-50 text-sm font-normal px-3 py-2 border border-slate-300 rounded`}
+							!status.available || status.connectedItems === 0 || loading !== null
+								? "cursor-default opacity-55 dark:bg-slate-900 dark:text-slate-500"
+								: "dark:text-slate-300 dark:hover:bg-slate-900"
+						} relative border-slate-200 text-slate-500 hover:bg-slate-50 text-sm font-normal px-3 py-2 border border-slate-300 rounded dark:border-slate-700`}
 					>
 						<span className={`${loading === "sync" ? "opacity-0" : ""}`}>Sync</span>
 						{loading === "sync" && <ButtonSpinner />}
@@ -212,8 +216,10 @@ const PlaidConnectionCard = () => {
 						onClick={handleConnect}
 						disabled={!status.available || loading !== null}
 						className={`${
-							!status.available || loading !== null ? "opacity-50 cursor-default" : ""
-						} relative font-normal text-slate-600 bg-cGreen-light hover:bg-cGreen-lightHover border border-slate-300 rounded text-sm py-2 px-3`}
+							!status.available || loading !== null
+								? "cursor-default opacity-60 dark:bg-slate-900 dark:text-slate-500"
+								: "dark:bg-cGreen dark:text-slate-950 dark:hover:bg-cGreen-light"
+						} relative font-normal text-slate-600 bg-cGreen-light hover:bg-cGreen-lightHover border border-slate-300 rounded text-sm py-2 px-3 dark:border-cGreen/40`}
 					>
 						<span className={`${loading === "connect" ? "opacity-0" : ""}`}>
 							{status.connectedItems > 0 ? "Connect Another Bank" : "Connect Bank"}
@@ -227,12 +233,14 @@ const PlaidConnectionCard = () => {
 					{status.items.map((item) => (
 						<div
 							key={item.itemId}
-							className="border border-slate-200 rounded-xl px-4 py-3 flex flex-col gap-3"
+							className="border border-slate-200 rounded-xl px-4 py-3 flex flex-col gap-3 dark:border-slate-800 dark:bg-slate-900/60"
 						>
 							<div className="flex justify-between items-start gap-4">
 								<div>
 									<div className="flex items-center gap-2 flex-wrap">
-										<div className="text-sm font-medium text-slate-600">{item.institutionName}</div>
+										<div className="text-sm font-medium text-slate-600 dark:text-slate-100">
+											{item.institutionName}
+										</div>
 										<span
 											className={`border rounded-full px-2 py-0.5 text-xs ${
 												syncStateConfig[item.syncStatus]?.className ?? syncStateConfig.pending.className
@@ -241,7 +249,7 @@ const PlaidConnectionCard = () => {
 											{syncStateConfig[item.syncStatus]?.label ?? syncStateConfig.pending.label}
 										</span>
 									</div>
-									<div className="text-xs text-slate-400">
+									<div className="text-xs text-slate-400 dark:text-slate-500">
 										{item.accountCount} account{item.accountCount === 1 ? "" : "s"}
 										{item.lastSyncAt ? ` • synced ${new Date(item.lastSyncAt).toLocaleString("en-US")}` : ""}
 									</div>
@@ -251,8 +259,10 @@ const PlaidConnectionCard = () => {
 										onClick={() => handleSync(item.itemId)}
 										disabled={loading !== null}
 										className={`${
-											loading !== null ? "opacity-50 cursor-default" : ""
-										} relative border-slate-200 text-slate-500 hover:bg-slate-50 text-xs font-normal px-2 py-1 border border-slate-300 rounded`}
+											loading !== null
+												? "cursor-default opacity-55 dark:bg-slate-950 dark:text-slate-500"
+												: "dark:text-slate-300 dark:hover:bg-slate-950"
+										} relative border-slate-200 text-slate-500 hover:bg-slate-50 text-xs font-normal px-2 py-1 border border-slate-300 rounded dark:border-slate-700`}
 									>
 										<span className={`${loading === `sync:${item.itemId}` ? "opacity-0" : ""}`}>Sync</span>
 										{loading === `sync:${item.itemId}` && <ButtonSpinner />}
@@ -261,8 +271,10 @@ const PlaidConnectionCard = () => {
 										onClick={() => handleDisconnect(item.itemId)}
 										disabled={loading !== null}
 										className={`${
-											loading !== null ? "opacity-50 cursor-default" : ""
-										} relative border border-slate-300 rounded text-xs px-2 py-1 text-slate-500 hover:bg-slate-50`}
+											loading !== null
+												? "cursor-default opacity-55 dark:bg-slate-950 dark:text-slate-500"
+												: "dark:text-slate-300 dark:hover:bg-slate-950"
+										} relative border border-slate-300 rounded text-xs px-2 py-1 text-slate-500 hover:bg-slate-50 dark:border-slate-700`}
 									>
 										<span className={`${loading === `disconnect:${item.itemId}` ? "opacity-0" : ""}`}>
 											Disconnect
@@ -276,29 +288,29 @@ const PlaidConnectionCard = () => {
 									item.accounts.map((account) => (
 										<div
 											key={account.accountId}
-											className="border border-slate-200 rounded-lg px-3 py-2 flex justify-between gap-3"
+											className="border border-slate-200 rounded-lg px-3 py-2 flex justify-between gap-3 dark:border-slate-800 dark:bg-slate-950/80"
 										>
 											<div className="min-w-0">
-												<div className="text-sm font-medium text-slate-600 truncate">
+												<div className="text-sm font-medium text-slate-600 truncate dark:text-slate-100">
 													{account.name}
 													{account.mask ? ` • ${account.mask}` : ""}
 												</div>
-												<div className="text-xs text-slate-400 truncate">
+												<div className="text-xs text-slate-400 truncate dark:text-slate-500">
 													{account.officialName || `${account.subtype || account.type} account`}
 												</div>
 											</div>
 											<div className="text-right shrink-0">
-												<div className="text-sm font-semibold text-slate-600">
+												<div className="text-sm font-semibold text-slate-600 dark:text-slate-100">
 													{formatBalance(account.currentBalance, account.isoCurrencyCode)}
 												</div>
-												<div className="text-xs text-slate-400">
+												<div className="text-xs text-slate-400 dark:text-slate-500">
 													Available {formatBalance(account.availableBalance, account.isoCurrencyCode)}
 												</div>
 											</div>
 										</div>
 									))
 								) : (
-									<div className="border border-dashed border-slate-200 rounded-lg px-3 py-3 text-sm text-slate-500">
+									<div className="border border-dashed border-slate-200 rounded-lg px-3 py-3 text-sm text-slate-500 dark:border-slate-800 dark:bg-slate-950/70 dark:text-slate-400">
 										No cached account details yet. Run sync to refresh balances.
 									</div>
 								)}

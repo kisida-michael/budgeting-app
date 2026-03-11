@@ -176,16 +176,16 @@ const DashboardAttentionPanel = () => {
 	];
 
 	const toneClasses = {
-		ok: "border-cGreen-light bg-cGreen-light/30",
+		ok: "border-cGreen-light bg-cGreen-light/30 dark:border-cGreen/40 dark:bg-cGreen/12",
 		warning: "border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-700",
 		neutral: "border-slate-200 bg-slate-50 dark:bg-slate-900 dark:border-slate-700",
 	};
 
 	return (
-		<div className="w-full flex flex-col bg-white border border-slate-300 rounded-2xl p-5 gap-3">
+		<div className="w-full flex flex-col bg-white border border-slate-300 rounded-2xl p-5 gap-3 dark:border-slate-700 dark:bg-slate-950/70">
 			<div className="flex items-center justify-between gap-3">
 				<div>
-					<div className="text-lg text-slate-700 font-semibold">Needs Attention</div>
+					<div className="text-lg text-slate-700 font-semibold dark:text-slate-100">Needs Attention</div>
 					<div className="text-sm text-slate-500">
 						Current month cleanup, budget pressure, and connection health.
 					</div>
@@ -198,13 +198,17 @@ const DashboardAttentionPanel = () => {
 						className={`border rounded-xl p-4 flex flex-col gap-2 ${toneClasses[card.tone] ?? toneClasses.neutral}`}
 					>
 						<div className="flex items-start justify-between gap-3">
-							<div className="text-sm font-semibold text-slate-600">{card.title}</div>
-							<div className="text-2xl font-bold text-slate-700">
-								{card.loading ? <span className="inline-block h-8 w-10 rounded bg-slate-200 animate-pulse" /> : card.value}
+							<div className="text-sm font-semibold text-slate-600 dark:text-slate-100">{card.title}</div>
+							<div className="text-2xl font-bold text-slate-700 dark:text-slate-100">
+								{card.loading ? (
+									<span className="inline-block h-8 w-10 rounded bg-slate-200 animate-pulse dark:bg-slate-800" />
+								) : (
+									card.value
+								)}
 							</div>
 						</div>
-						<div className="text-sm text-slate-700">{card.label ?? card.title}</div>
-						<div className="text-sm text-slate-500">{card.detail}</div>
+						<div className="text-sm text-slate-700 dark:text-slate-200">{card.label ?? card.title}</div>
+						<div className="text-sm text-slate-500 dark:text-slate-400">{card.detail}</div>
 					</div>
 				))}
 			</div>

@@ -1,6 +1,9 @@
 import { useAnimationStore } from "../util/animationStore";
 import ButtonSpinner from "./ButtonSpinner";
 import PropTypes from "prop-types";
+import { getSelectableCategories } from "../util/categorySelections";
+import { useDataStore } from "../util/dataStore";
+import { getCategoryChipStyle } from "../util/themeStyles";
 
 const TransactionTableCategoryButton = ({
 	transaction,
@@ -18,6 +21,8 @@ const TransactionTableCategoryButton = ({
 			openCategoryMenu: state.openCategoryMenu,
 			closeCategoryMenu: state.closeCategoryMenu,
 		}));
+	const theme = useDataStore((state) => state.theme);
+	const transactionCategory = categories?.find((category) => category.name === transaction.categoryName);
 
 	return (
 		<>
@@ -34,13 +39,12 @@ const TransactionTableCategoryButton = ({
 				}
 				className={`${
 					transaction.ignored ? "hover:cursor-default" : ""
-				} category-button inline-block bg-red-100 px-1.5 py-0.5 border border-red-200 rounded`}
-				// Apply color styles set inside the DB
-				style={{
-					backgroundColor: categories?.find((category) => category.name === transaction.categoryName).color,
-					borderWidth: "1px",
-					borderColor: categories?.find((category) => category.name === transaction.categoryName).colorDark,
-				}}
+				} category-button inline-block px-1.5 py-0.5 border rounded text-sm font-medium`}
+				style={getCategoryChipStyle({
+					color: transactionCategory?.color,
+					colorDark: transactionCategory?.colorDark,
+					theme,
+				})}
 			>
 				{transaction.categoryName}
 			</button>
@@ -56,21 +60,21 @@ const TransactionTableCategoryButton = ({
 					} ${
 						// Check if the menu should be below or above the button, based on available space
 						menuDirectionDown ? "dropdown-down top-[130%]" : "dropdown-up bottom-[130%]"
-					} absolute bg-white border border-slate-300 rounded-lg drop-shadow-sm z-10 px-2 py-1.5`}
+					} absolute bg-white border border-slate-300 rounded-lg drop-shadow-sm z-10 px-2 py-1.5 dark:border-slate-700 dark:bg-slate-950`}
 				>
-					<div className="font-semibold text-slate-600 mb-1">Edit Category</div>
+					<div className="font-semibold text-slate-600 mb-1 dark:text-slate-100">Edit Category</div>
 					{/** Map each category to be displayed in the dropdown menu */}
 					<div className={`${categoryUpdateLoading ? "opacity-0" : ""} flex flex-col gap-1 relative`}>
 						{!categoriesLoading &&
-							categories.map((category) => (
+							getSelectableCategories(categories, transaction.categoryName).map((category) => (
 								<button
 									key={category.name}
-									className="category-button text-sm text-slate-600 px-3 py-0.5 rounded"
-									style={{
-										backgroundColor: category.color,
-										borderWidth: "1px",
-										borderColor: category.colorDark,
-									}}
+									className="category-button text-sm px-3 py-0.5 rounded font-medium"
+									style={getCategoryChipStyle({
+										color: category.color,
+										colorDark: category.colorDark,
+										theme,
+									})}
 									onClick={
 										!categoryUpdateLoading
 											? () => editTransactionCategory(transaction, category.name)
