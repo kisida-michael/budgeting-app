@@ -9,3 +9,4 @@
 - For Clerk v6 custom signup with the signal-based API, complete email-code signup with `signUp.password()`, `signUp.verifications.sendEmailCode()`, `signUp.verifications.verifyEmailCode()`, and `signUp.finalize()` so verification finishes into a real active account.
 - For Plaid production web Link, support an optional `PLAID_REDIRECT_URI` and return Plaid's upstream JSON error payload from the API; otherwise production config failures collapse into opaque HTML Axios stack traces.
 - In dark mode, category chips cannot reuse light-theme accent text treatment; keep chip text explicitly high-contrast and apply the same theme-aware chip helper across Budgets, Transactions, and Settings.
+- For the Budgets list, keep each category row compact: chip and meter on the left, spend summary and derived metrics on the right. The taller stacked card layout wastes vertical space and was explicitly rejected.

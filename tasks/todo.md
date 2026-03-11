@@ -1,10 +1,9 @@
 # Budget Rewrite
 
 ## Current Task
-- [x] Add budget and spending drilldowns that navigate into the Transactions dashboard with the relevant date/category filters applied.
-- [x] Add bulk recategorize follow-up UX that can optionally save a merchant rule when the selected transactions support a safe single-rule prompt.
-- [x] Finish migrating the remaining category-colored controls used by Spending, Merchants, filters, and bulk actions onto the shared dark-mode chip styles.
-- [x] Verify the drilldown and bulk recategorize pass with lint, typecheck, and build.
+- [x] Make every Budgets meter the same width regardless of category chip label length.
+- [x] Preserve the compact Budgets row layout and drilldown/edit behavior after the meter-width adjustment.
+- [x] Verify the Budgets meter-width pass with lint, typecheck, and build.
 
 ## Active Plan
 - [x] Clone the original source repository into this project root.
@@ -109,3 +108,8 @@
 - Added an optional exact-match merchant-rule prompt after bulk recategorize when the selected transactions all share one merchant and no existing exact rule already exists.
 - Finished moving remaining category-colored controls in Spending, Merchants, dashboard stats, filter menus, and bulk actions onto the shared theme-aware chip styling.
 - Verified the drilldown and bulk recategorize pass with `npm run lint`, `npm run typecheck`, and `npm run build`.
+- Reworked the Budgets row layout so each category card is shorter, with the chip and meter grouped on the left and the spend summary plus derived metrics grouped on the right.
+- Preserved the existing edit-mode budget input and row click-through drilldown behavior while compressing the vertical space used by each budget item.
+- Verified the Budgets layout pass with `npm run lint`, `npm run typecheck`, and `npm run build`.
+- Fixed the Budgets meter alignment by giving the category chip its own fixed-width slot, so every meter uses the same width regardless of label length.
+- Verified the Budgets meter-width pass with `npm run lint`, `npm run typecheck`, and `npm run build`.

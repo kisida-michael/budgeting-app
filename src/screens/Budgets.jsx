@@ -280,107 +280,116 @@ const Budgets = () => {
 								<div
 									key={budget.name}
 									onClick={() => openBudgetDrilldown(budget)}
-									className={`border border-slate-200 rounded-lg p-4 w-full flex flex-col gap-2 dark:border-slate-800 dark:bg-slate-900/60 ${
+									className={`border border-slate-200 rounded-lg p-3 w-full flex flex-col gap-3 dark:border-slate-800 dark:bg-slate-900/60 ${
 										editing ? "" : "cursor-pointer transition-colors hover:bg-slate-50 dark:hover:bg-slate-900/80"
 									}`}
 								>
-									<div className="flex justify-between">
-										<div
-											className="py-1 px-2 rounded text-sm font-medium"
-											style={getCategoryChipStyle({
-												color: budget.color,
-												colorDark: budget.colorDark,
-												theme,
-											})}
-										>
-											{budget.name}
+									<div className="flex flex-col gap-3 md:flex-row md:items-center md:gap-4">
+										<div className="flex items-center gap-3 md:w-[38%] md:min-w-0">
+											<div className="w-40 shrink-0">
+												<div
+													className="inline-flex max-w-full py-1 px-2 rounded text-sm font-medium"
+													style={getCategoryChipStyle({
+														color: budget.color,
+														colorDark: budget.colorDark,
+														theme,
+													})}
+												>
+													{budget.name}
+												</div>
+											</div>
+											<div className="grow min-w-0">
+												<div
+													className="h-3 w-full rounded overflow-hidden border"
+													style={getBudgetRailStyle({
+														colorLight: budget.colorLight,
+														colorDark: budget.colorDark,
+														theme,
+													})}
+												>
+													<div
+														className="h-full"
+														style={{
+															backgroundColor: getBudgetFillColor({
+																colorDark: budget.colorDark,
+																percentage: budget.percentage,
+																theme,
+															}),
+															width: budget?.percentage
+																? budget.percentage > 100
+																	? "100%"
+																	: `${budget.percentage}%`
+																: "0%",
+														}}
+													/>
+												</div>
+											</div>
 										</div>
-										<div className="flex gap-2 items-center">
-											<span className="text-slate-500 dark:text-slate-400">
-												<span className="text-slate-600 font-semibold dark:text-slate-100">
-													{formatCurrency(budget.spending)}
+										<div className="flex flex-col gap-2 md:w-[62%] md:min-w-0">
+											<div className="flex justify-between gap-3 items-center">
+												<span className="text-slate-500 dark:text-slate-400 text-sm md:text-base">
+													<span className="text-slate-600 font-semibold dark:text-slate-100">
+														{formatCurrency(budget.spending)}
+													</span>
+													{ignoredCategories.includes(budget.name) && " total"}
+													{!ignoredCategories.includes(budget.name) && (
+														<>
+															{" spent out of "}
+															{(!editing || nonEditableCategories.includes(budget.name)) && (
+																<span className="text-slate-600 font-semibold dark:text-slate-100">
+																	<>{formatCurrency(budget.limit)}</>
+																</span>
+															)}
+														</>
+													)}
 												</span>
-												{ignoredCategories.includes(budget.name) && " total"}
-												{!ignoredCategories.includes(budget.name) && (
-													<>
-														{" spent out of "}
-														{(!editing || nonEditableCategories.includes(budget.name)) && (
-															<span className="text-slate-600 font-semibold dark:text-slate-100">
-																<>{formatCurrency(budget.limit)}</>
-															</span>
-														)}
-													</>
+												{editing && !nonEditableCategories.includes(budget.name) && (
+													<input
+														className="border border-slate-200 w-28 text-right outline-none dark:border-slate-700 dark:bg-slate-950"
+														value={budget.limit || ""}
+														placeholder="--"
+														onClick={(event) => event.stopPropagation()}
+														onChange={(e) => {
+															if (isNaN(e.target.value) || e.target.value.includes("-"))
+																return;
+
+															let newBudgets = [...localBudgets];
+															newBudgets = newBudgets.map((existingBudget) => {
+																if (existingBudget.name === budget.name) {
+																	return { ...budget, limit: e.target.value };
+																} else {
+																	return existingBudget;
+																}
+															});
+
+															setLocalBudgets(newBudgets);
+														}}
+													/>
 												)}
-											</span>
-											{editing && !nonEditableCategories.includes(budget.name) && (
-												<input
-													className="border border-slate-200 w-28 text-right outline-none dark:border-slate-700 dark:bg-slate-950"
-													value={budget.limit || ""}
-													placeholder="--"
-													onChange={(e) => {
-														if (isNaN(e.target.value) || e.target.value.includes("-"))
-															return;
-
-														let newBudgets = [...localBudgets];
-														newBudgets = newBudgets.map((existingBudget) => {
-															if (existingBudget.name === budget.name) {
-																return { ...budget, limit: e.target.value };
-															} else {
-																return existingBudget;
-															}
-														});
-
-														setLocalBudgets(newBudgets);
-													}}
-												/>
-											)}
+											</div>
+											<div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs text-slate-500 dark:text-slate-400">
+												<div className="border border-slate-200 rounded px-3 py-1.5 dark:border-slate-800 dark:bg-slate-950/75">
+													<span className="font-medium text-slate-600 dark:text-slate-200">Remaining:</span>{" "}
+													<span
+														className={
+															budget.remaining !== null && budget.remaining < 0
+																? "text-red-500 dark:text-red-400"
+																: "dark:text-slate-100"
+														}
+													>
+														{formatCurrency(budget.remaining)}
+													</span>
+												</div>
+												<div className="border border-slate-200 rounded px-3 py-1.5 dark:border-slate-800 dark:bg-slate-950/75">
+													<span className="font-medium text-slate-600 dark:text-slate-200">Forecast:</span>{" "}
+													<span className="dark:text-slate-100">{formatCurrency(budget.forecast)}</span>
+												</div>
+												<div className="border border-slate-200 rounded px-3 py-1.5 dark:border-slate-800 dark:bg-slate-950/75">
+													<span className="font-medium text-slate-600 dark:text-slate-200">Safe / day:</span>{" "}
+													<span className="dark:text-slate-100">{formatCurrency(budget.safeToSpend)}</span>
+												</div>
+											</div>
 										</div>
-									</div>
-									<div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-sm text-slate-500 dark:text-slate-400">
-										<div className="border border-slate-200 rounded px-3 py-2 dark:border-slate-800 dark:bg-slate-950/75">
-											<span className="font-medium text-slate-600 dark:text-slate-200">Remaining:</span>{" "}
-											<span
-												className={
-													budget.remaining !== null && budget.remaining < 0
-														? "text-red-500 dark:text-red-400"
-														: "dark:text-slate-100"
-												}
-											>
-												{formatCurrency(budget.remaining)}
-											</span>
-										</div>
-										<div className="border border-slate-200 rounded px-3 py-2 dark:border-slate-800 dark:bg-slate-950/75">
-											<span className="font-medium text-slate-600 dark:text-slate-200">Forecast:</span>{" "}
-											<span className="dark:text-slate-100">{formatCurrency(budget.forecast)}</span>
-										</div>
-										<div className="border border-slate-200 rounded px-3 py-2 dark:border-slate-800 dark:bg-slate-950/75">
-											<span className="font-medium text-slate-600 dark:text-slate-200">Safe / day:</span>{" "}
-											<span className="dark:text-slate-100">{formatCurrency(budget.safeToSpend)}</span>
-										</div>
-									</div>
-									<div
-										className="h-3 w-full rounded overflow-hidden border"
-										style={getBudgetRailStyle({
-											colorLight: budget.colorLight,
-											colorDark: budget.colorDark,
-											theme,
-										})}
-									>
-										<div
-											className="h-full"
-											style={{
-												backgroundColor: getBudgetFillColor({
-													colorDark: budget.colorDark,
-													percentage: budget.percentage,
-													theme,
-												}),
-												width: budget?.percentage
-													? budget.percentage > 100
-														? "100%"
-														: `${budget.percentage}%`
-													: "0%",
-											}}
-										/>
 									</div>
 								</div>
 							))}
