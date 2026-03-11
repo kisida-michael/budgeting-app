@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useDataStore } from "../util/dataStore";
 import MerchantSettingsItem from "./MerchantSettingsItem";
 import MerchantSettingsItemCreate from "./MerchantSettingsItemCreate";
+import MerchantRuleTester from "./MerchantRuleTester";
 import { applyMerchantSettingsToExisting } from "../util/supabaseQueries";
 import ButtonSpinner from "./ButtonSpinner";
 
@@ -100,6 +101,7 @@ const MerchantSettings = () => {
 					}
 					You should review your saved merchants and ensure they work as you intend.
 				</div> */}
+				<MerchantRuleTester disabled={Object.values(loading).some((value) => value)} />
 				<div className="flex flex-col gap-3">
 					{merchantSettings?.length === 0 && editingMerchantSetting?.id !== -1 && (
 						<div className="w-full border border-slate-300 rounded flex justify-center items-center py-3 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-400">

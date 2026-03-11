@@ -1,9 +1,10 @@
 # Budget Rewrite
 
 ## Current Task
-- [x] Make every Budgets meter the same width regardless of category chip label length.
-- [x] Preserve the compact Budgets row layout and drilldown/edit behavior after the meter-width adjustment.
-- [x] Verify the Budgets meter-width pass with lint, typecheck, and build.
+- [x] Add a server-backed merchant rule testing endpoint that previews the actual saved rule match order for a merchant string.
+- [x] Add a Merchants settings test panel that shows the matched rule, resulting category, and no-match state without changing the saved rules.
+- [x] Add a React Native app track to `roadmap.md` tied to the shared contracts and existing Express backend.
+- [x] Verify the merchant-rule tester and roadmap update with lint, typecheck, and build.
 
 ## Active Plan
 - [x] Clone the original source repository into this project root.
@@ -113,3 +114,10 @@
 - Verified the Budgets layout pass with `npm run lint`, `npm run typecheck`, and `npm run build`.
 - Fixed the Budgets meter alignment by giving the category chip its own fixed-width slot, so every meter uses the same width regardless of label length.
 - Verified the Budgets meter-width pass with `npm run lint`, `npm run typecheck`, and `npm run build`.
+- Reordered the transaction routes in `server/src/routes/workspace.ts` so `/transactions/bulk/category` and `/transactions/bulk/ignored` are matched before the `/:id/*` handlers.
+- Added numeric id guards for the single-transaction patch routes and filtered invalid ids out of the bulk patch payloads before they reach the DB layer.
+- Verified the bulk transaction route fix with `npm run lint`, `npm run typecheck`, and `npm run build`.
+- Added a server-backed merchant rule preview flow using the real saved-rule order, exposed through a new authenticated `/api/merchants/test` endpoint.
+- Added a Merchants settings test panel so a merchant string can be checked against the current rules and matched category before changing production rules.
+- Added a React Native companion-app track to `roadmap.md`, explicitly tied to the current Express API and `shared/` contracts rather than a separate backend.
+- Verified the merchant-rule tester and roadmap update with `npm run lint`, `npm run typecheck`, and `npm run build`.

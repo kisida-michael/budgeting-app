@@ -88,6 +88,20 @@ Priority: medium
 - Data export
   Export transactions, budgets, and derived summaries.
 
+## Phase 6: Mobile Expansion
+Priority: medium
+
+- React Native companion app
+  Build a mobile client that reuses the existing Express API and `shared/` contracts instead of forking product logic.
+- Mobile auth and session flow
+  Support Clerk-based mobile sign-in with the same user/account model as the web app.
+- Core mobile workflows
+  Cover dashboard summaries, transactions, budgets, Plaid connection state, and basic recategorization on phones.
+- Mobile-first notifications
+  Add push-ready surfaces for sync failures, uncategorized transactions, and budget pressure once the core app is stable.
+- Shared design language
+  Keep the mobile app visually aligned with the preserved web product while adapting layouts for native interaction patterns.
+
 ## Recommended Build Order
 1. Dark mode
 2. Transaction search
@@ -99,6 +113,7 @@ Priority: medium
 8. Category management in Settings
 9. Merchant rule testing
 10. Drilldown and inline detail flows
+11. React Native companion app once the web workflows and shared contracts have stabilized
 
 ## First Implementation Wave
 - Add theme tokens and dark mode persistence.
@@ -112,3 +127,4 @@ Priority: medium
 - Multi-tenant billing/admin features
 - Major navigation redesign
 - Mobile-first redesign
+- A separate mobile backend; the React Native app should sit on top of the current API/shared contract model

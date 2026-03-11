@@ -18,6 +18,7 @@ import {
   buildSpendingBreakdown,
   commitTransactionsImport,
   copyBudgetsFromPreviousPeriod,
+  findMatchingMerchantRule,
   serializeTransaction,
   previewTransactionsImport,
   validateConfigurationPayload
@@ -137,24 +138,8 @@ router.post("/transactions/import", async (req, res) => {
   res.json({ ok: true });
 });
 
-router.patch("/transactions/:id/ignored", async (req, res) => {
-  await db
-    .update(transactions)
-    .set({ ignored: Boolean(req.body?.ignored), updatedAt: new Date() })
-    .where(and(eq(transactions.id, Number(req.params.id)), eq(transactions.userId, req.authUser!.id)));
-  res.json({ ok: true });
-});
-
-router.patch("/transactions/:id/category", async (req, res) => {
-  await db
-    .update(transactions)
-    .set({ categoryName: String(req.body?.categoryName), updatedAt: new Date() })
-    .where(and(eq(transactions.id, Number(req.params.id)), eq(transactions.userId, req.authUser!.id)));
-  res.json({ ok: true });
-});
-
 router.patch("/transactions/bulk/ignored", async (req, res) => {
-  const ids = (req.body?.ids ?? []).map(Number);
+  const ids = (req.body?.ids ?? []).map(Number).filter(Number.isFinite);
   if (ids.length > 0) {
     await db
       .update(transactions)
@@ -165,13 +150,41 @@ router.patch("/transactions/bulk/ignored", async (req, res) => {
 });
 
 router.patch("/transactions/bulk/category", async (req, res) => {
-  const ids = (req.body?.ids ?? []).map(Number);
+  const ids = (req.body?.ids ?? []).map(Number).filter(Number.isFinite);
   if (ids.length > 0) {
     await db
       .update(transactions)
       .set({ categoryName: String(req.body?.categoryName), updatedAt: new Date() })
       .where(and(eq(transactions.userId, req.authUser!.id), inArray(transactions.id, ids)));
   }
+  res.json({ ok: true });
+});
+
+router.patch("/transactions/:id/ignored", async (req, res) => {
+  const transactionId = Number(req.params.id);
+  if (!Number.isFinite(transactionId)) {
+    res.status(400).json({ error: "Transaction id must be numeric." });
+    return;
+  }
+
+  await db
+    .update(transactions)
+    .set({ ignored: Boolean(req.body?.ignored), updatedAt: new Date() })
+    .where(and(eq(transactions.id, transactionId), eq(transactions.userId, req.authUser!.id)));
+  res.json({ ok: true });
+});
+
+router.patch("/transactions/:id/category", async (req, res) => {
+  const transactionId = Number(req.params.id);
+  if (!Number.isFinite(transactionId)) {
+    res.status(400).json({ error: "Transaction id must be numeric." });
+    return;
+  }
+
+  await db
+    .update(transactions)
+    .set({ categoryName: String(req.body?.categoryName), updatedAt: new Date() })
+    .where(and(eq(transactions.id, transactionId), eq(transactions.userId, req.authUser!.id)));
   res.json({ ok: true });
 });
 
@@ -587,6 +600,39 @@ router.post("/merchants", async (req, res) => {
   }
 
   res.json({ ok: true });
+});
+
+router.post("/merchants/test", async (req, res) => {
+  const merchant = String(req.body?.merchant ?? "").trim();
+  if (!merchant) {
+    res.status(400).json({ error: "Merchant test text cannot be empty." });
+    return;
+  }
+
+  const rows = await db
+    .select({
+      id: merchants.id,
+      text: merchants.text,
+      type: merchants.type,
+      categoryName: merchants.categoryName,
+      category: categories
+    })
+    .from(merchants)
+    .innerJoin(categories, eq(merchants.categoryName, categories.name))
+    .where(eq(merchants.userId, req.authUser!.id))
+    .orderBy(asc(merchants.id));
+
+  const matchedRule = findMatchingMerchantRule(merchant, rows);
+  const matchedPosition = matchedRule ? rows.findIndex((row) => row.id === matchedRule.id) + 1 : null;
+
+  res.json({
+    merchant,
+    matched: Boolean(matchedRule),
+    rulePosition: matchedPosition,
+    rule: matchedRule
+      ? rows.find((row) => row.id === matchedRule.id) ?? null
+      : null
+  });
 });
 
 router.delete("/merchants/:id", async (req, res) => {

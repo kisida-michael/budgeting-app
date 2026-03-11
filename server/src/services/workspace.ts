@@ -16,6 +16,7 @@ const specialCaseCategories = ["Income", "Credits/Payments"];
 type TransactionRow = typeof transactions.$inferSelect;
 type MerchantRuleRow = typeof merchants.$inferSelect;
 type ConfigurationRow = typeof configurations.$inferSelect;
+type MerchantRuleLike = Pick<MerchantRuleRow, "id" | "text" | "type" | "categoryName">;
 
 type FilterCategory = {
   name: string;
@@ -560,20 +561,33 @@ export async function copyBudgetsFromPreviousPeriod(userId: string, month: numbe
   };
 }
 
+export function findMatchingMerchantRule<T extends MerchantRuleLike>(
+  merchantText: string,
+  merchantRules: T[]
+): T | null {
+  let matchedRule: T | null = null;
+
+  merchantRules.forEach((merchantRule) => {
+    if (merchantRule.type === "contains" && merchantText.includes(merchantRule.text)) {
+      matchedRule = merchantRule;
+    } else if (merchantRule.type === "equals" && merchantText === merchantRule.text) {
+      matchedRule = merchantRule;
+    }
+  });
+
+  return matchedRule;
+}
+
 function applyMerchantRules(
   transactionRows: TransactionView[],
   merchantRules: MerchantRuleRow[]
 ) {
   return transactionRows.map((transaction) => {
     const updated = { ...transaction };
-
-    merchantRules.forEach((merchantRule) => {
-      if (merchantRule.type === "contains" && updated.merchant.includes(merchantRule.text)) {
-        updated.categoryName = merchantRule.categoryName;
-      } else if (merchantRule.type === "equals" && updated.merchant === merchantRule.text) {
-        updated.categoryName = merchantRule.categoryName;
-      }
-    });
+    const matchedRule = findMatchingMerchantRule(updated.merchant, merchantRules);
+    if (matchedRule) {
+      updated.categoryName = matchedRule.categoryName;
+    }
 
     return updated;
   });
@@ -791,14 +805,10 @@ export async function applyMerchantRulesToExistingTransactions(userId: string) {
   const updates = transactionRows
     .map((transaction) => {
       let categoryName = transaction.categoryName;
-
-      merchantRules.forEach((merchantRule) => {
-        if (merchantRule.type === "contains" && transaction.merchant.includes(merchantRule.text)) {
-          categoryName = merchantRule.categoryName;
-        } else if (merchantRule.type === "equals" && transaction.merchant === merchantRule.text) {
-          categoryName = merchantRule.categoryName;
-        }
-      });
+      const matchedRule = findMatchingMerchantRule(transaction.merchant, merchantRules);
+      if (matchedRule) {
+        categoryName = matchedRule.categoryName;
+      }
 
       if (categoryName === transaction.categoryName) {
         return null;

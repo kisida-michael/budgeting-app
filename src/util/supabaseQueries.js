@@ -346,6 +346,13 @@ export const applyMerchantSettingsToExisting = async () => {
 	}
 };
 
+export const previewMerchantRule = async (merchant) => {
+	return await apiRequest("/api/merchants/test", {
+		method: "POST",
+		body: JSON.stringify({ merchant }),
+	});
+};
+
 export const deleteUpload = async (uploadId) => {
 	try {
 		await apiRequest(`/api/uploads/${uploadId}`, {
