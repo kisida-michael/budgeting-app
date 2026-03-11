@@ -1,21 +1,31 @@
 import TransactionTable from "../components/TransactionTable";
 import Navbar from "../components/Navbar";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useDataStore } from "../util/dataStore";
 import NotificationBanner from "../components/NotificationBanner";
 import DashboardStats from "../components/DashboardStats";
 import UploadModal from "../components/UploadModal";
 import PlaidConnectionCard from "../components/PlaidConnectionCard";
 import DashboardAttentionPanel from "../components/DashboardAttentionPanel";
+import { applyDashboardFilters } from "../util/dashboardFilters";
 
 const Dashboard = () => {
-	const { transactions, setTransactions, transactionsLoading } = useDataStore((state) => ({
+	const { transactions, setTransactions, transactionsLoading, categories, setFilters, setDashboardStats, setActiveSavedView } =
+		useDataStore((state) => ({
 		transactions: state.transactions,
 		setTransactions: state.setTransactions,
 		transactionsLoading: state.transactionsLoading,
+		categories: state.categories,
+		setFilters: state.setFilters,
+		setDashboardStats: state.setDashboardStats,
+		setActiveSavedView: state.setActiveSavedView,
 	}));
 	const [uploadModalVisible, setUploadModalVisible] = useState(false);
 	const [uploadModalAnimating, setUploadModalAnimating] = useState(false);
+	const location = useLocation();
+	const navigate = useNavigate();
+	const drilldownFilters = location.state?.transactionDrilldown?.filters ?? null;
 
 	const openUploadModal = () => {
 		setUploadModalAnimating(true);
@@ -32,6 +42,42 @@ const Dashboard = () => {
 			setUploadModalAnimating(false);
 		}, 100);
 	};
+
+	useEffect(() => {
+		if (!drilldownFilters || !transactions) {
+			return;
+		}
+
+		let cancelled = false;
+
+		const applyDrilldown = async () => {
+			await applyDashboardFilters({
+				transactions,
+				filters: drilldownFilters,
+				categories: categories ?? [],
+				setFilters,
+				setDashboardStats,
+				setActiveSavedView,
+			});
+
+			if (cancelled) return;
+
+			navigate("/", { replace: true, state: null });
+
+			window.setTimeout(() => {
+				document.getElementById("transactions-panel")?.scrollIntoView({
+					behavior: "smooth",
+					block: "start",
+				});
+			}, 50);
+		};
+
+		applyDrilldown();
+
+		return () => {
+			cancelled = true;
+		};
+	}, [categories, drilldownFilters, navigate, setActiveSavedView, setDashboardStats, setFilters, transactions]);
 
 	return (
 		<div className="w-screen h-screen flex overflow-hidden relative">

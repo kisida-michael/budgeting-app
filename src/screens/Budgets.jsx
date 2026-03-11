@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useDataStore } from "../util/dataStore";
 import { copyPreviousBudget, saveDefaultBudget, updateBudget } from "../util/supabaseQueries";
 import { monthsByNumber } from "../constants/Dates";
@@ -7,6 +8,7 @@ import Navbar from "../components/Navbar";
 import NotificationBanner from "../components/NotificationBanner";
 import ButtonSpinner from "../components/ButtonSpinner";
 import { getBudgetFillColor, getBudgetRailStyle, getCategoryChipStyle } from "../util/themeStyles";
+import { buildBudgetDrilldownFilters, createTransactionDrilldownState } from "../util/transactionDrilldown";
 
 const formatCurrency = (value) => {
 	if (value === null || value === undefined || Number.isNaN(Number(value))) return "--";
@@ -45,6 +47,7 @@ const Budgets = () => {
 	const [saving, setSaving] = useState(false);
 	const [copyingPrevious, setCopyingPrevious] = useState(false);
 	const [savingDefault, setSavingDefault] = useState(false);
+	const navigate = useNavigate();
 
 	useEffect(() => {
 		if (categories === null) fetchCategories();
@@ -130,6 +133,20 @@ const Budgets = () => {
 	const totalRemaining = totalBudget?.remaining ?? null;
 	const totalForecast = totalBudget?.forecast ?? null;
 	const totalSafeToSpend = totalBudget?.safeToSpend ?? null;
+
+	const openBudgetDrilldown = (budget) => {
+		if (editing || budgetsLoading) return;
+
+		const month = Number(budgetsMonth);
+		const year = Number(budgetsYear);
+		const filters = buildBudgetDrilldownFilters({ budget, month, year });
+		navigate("/", {
+			state: createTransactionDrilldownState(
+				filters,
+				`${budget.name} transactions for ${monthsByNumber[month]} ${year}`
+			),
+		});
+	};
 
 	return (
 		<div className="w-screen h-screen flex overflow-hidden relative">
@@ -262,7 +279,10 @@ const Budgets = () => {
 							{localBudgets?.map((budget) => (
 								<div
 									key={budget.name}
-									className="border border-slate-200 rounded-lg p-4 w-full flex flex-col gap-2 dark:border-slate-800 dark:bg-slate-900/60"
+									onClick={() => openBudgetDrilldown(budget)}
+									className={`border border-slate-200 rounded-lg p-4 w-full flex flex-col gap-2 dark:border-slate-800 dark:bg-slate-900/60 ${
+										editing ? "" : "cursor-pointer transition-colors hover:bg-slate-50 dark:hover:bg-slate-900/80"
+									}`}
 								>
 									<div className="flex justify-between">
 										<div

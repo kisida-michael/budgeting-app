@@ -4,7 +4,7 @@ import PropTypes from "prop-types";
 import { useDataStore } from "../util/dataStore";
 import { getCategoryChipStyle } from "../util/themeStyles";
 
-const SpendingTableCategoryColumn = ({ categories, isFirstColumn }) => {
+const SpendingTableCategoryColumn = ({ categories, isFirstColumn, onCategoryClick, onTotalClick }) => {
 	const theme = useDataStore((state) => state.theme);
 
 	return (
@@ -24,8 +24,11 @@ const SpendingTableCategoryColumn = ({ categories, isFirstColumn }) => {
 					<Fragment key={category.name}>
 						<div className="h-[1px] bg-slate-300 dark:bg-neutral-500"></div>
 						<div className={`flex justify-start items-center grow px-2 min-h-11 py-1`} key={category.name}>
-							<div
-								className="inline-block py-1 px-2 rounded-md font-normal"
+							<button
+								onClick={() => onCategoryClick?.(category)}
+								className={`inline-block py-1 px-2 rounded-md font-normal ${
+									onCategoryClick ? "transition-transform hover:scale-[1.01]" : ""
+								}`}
 								style={getCategoryChipStyle({
 									color: category.color,
 									colorDark: category.colorDark,
@@ -33,7 +36,7 @@ const SpendingTableCategoryColumn = ({ categories, isFirstColumn }) => {
 								})}
 							>
 								{category.name}
-							</div>
+							</button>
 						</div>
 					</Fragment>
 				))}
@@ -44,7 +47,14 @@ const SpendingTableCategoryColumn = ({ categories, isFirstColumn }) => {
 					borderBottomRightRadius: !isFirstColumn ? "0.5rem" : "",
 				}}
 			>
-				<div className="inline-block py-1 px-2 rounded-md font-bold dark:text-white">Total</div>
+				<button
+					onClick={() => onTotalClick?.()}
+					className={`inline-block py-1 px-2 rounded-md font-bold dark:text-white ${
+						onTotalClick ? "hover:text-cGreen-light" : ""
+					}`}
+				>
+					Total
+				</button>
 			</div>
 
 			{categories
@@ -53,8 +63,11 @@ const SpendingTableCategoryColumn = ({ categories, isFirstColumn }) => {
 					<Fragment key={category.name}>
 						{index !== 0 && <div className="h-[1px] bg-slate-300 dark:bg-neutral-500"></div>}
 						<div className="flex justify-start items-center grow px-2 py-0.5 min-h-11" key={category.name}>
-							<div
-								className="inline-block py-0.5 px-2 rounded-md font-normal"
+							<button
+								onClick={() => onCategoryClick?.(category)}
+								className={`inline-block py-0.5 px-2 rounded-md font-normal ${
+									onCategoryClick ? "transition-transform hover:scale-[1.01]" : ""
+								}`}
 								style={getCategoryChipStyle({
 									color: category.color,
 									colorDark: category.colorDark,
@@ -62,7 +75,7 @@ const SpendingTableCategoryColumn = ({ categories, isFirstColumn }) => {
 								})}
 							>
 								{category.name}
-							</div>
+							</button>
 						</div>
 					</Fragment>
 				))}
@@ -73,6 +86,8 @@ const SpendingTableCategoryColumn = ({ categories, isFirstColumn }) => {
 SpendingTableCategoryColumn.propTypes = {
 	categories: PropTypes.array,
 	isFirstColumn: PropTypes.bool,
+	onCategoryClick: PropTypes.func,
+	onTotalClick: PropTypes.func,
 };
 
 export default SpendingTableCategoryColumn;

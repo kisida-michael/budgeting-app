@@ -1,12 +1,19 @@
 import { useState } from "react";
 import { useAnimationStore } from "../util/animationStore";
 import { useDataStore } from "../util/dataStore";
-import { deleteTransactions, setTransactionCategories, setTransactionsIgnored } from "../util/supabaseQueries";
+import {
+	deleteTransactions,
+	getMerchantSettings,
+	setTransactionCategories,
+	setTransactionsIgnored,
+	upsertMerchantSetting,
+} from "../util/supabaseQueries";
 import { getDashboardStats } from "../util/statsUtil";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faList } from "@fortawesome/free-solid-svg-icons";
 import PropTypes from "prop-types";
 import { getActiveCategories } from "../util/categorySelections";
+import { getCategoryChipStyle } from "../util/themeStyles";
 
 const BulkActions = ({ localTransactions, setLocalTransactions }) => {
 	const { bulkActionsMenuVisible, bulkActionsMenuAnimating, openBulkActionsMenu, closeBulkActionsMenu } =
@@ -16,24 +23,70 @@ const BulkActions = ({ localTransactions, setLocalTransactions }) => {
 			openBulkActionsMenu: state.openBulkActionsMenu,
 			closeBulkActionsMenu: state.closeBulkActionsMenu,
 		}));
-	const { filters, setDashboardStats, categories, setNotification } = useDataStore((state) => ({
+	const { filters, setTransactions, setDashboardStats, categories, setNotification, fetchBudgets, merchantSettings, setMerchantSettings, theme } =
+		useDataStore((state) => ({
 		setTransactions: state.setTransactions,
 		filters: state.filters,
 		setDashboardStats: state.setDashboardStats,
 		categories: state.categories,
 		setNotification: state.setNotification,
+		fetchBudgets: state.fetchBudgets,
+		merchantSettings: state.merchantSettings,
+		setMerchantSettings: state.setMerchantSettings,
+		theme: state.theme,
 	}));
 	const [slideMenu, setSlideMenu] = useState(false);
 
-	const onClickCategory = async (categoryName) => {
-		closeBulkActionsMenu();
-		const success = await setTransactionCategories(
-			localTransactions.filter((t) => t.selected),
-			categoryName
+	const maybeCreateMerchantRule = async (selectedTransactions, categoryName) => {
+		const distinctMerchants = [...new Set(selectedTransactions.map((transaction) => transaction.merchant?.trim()).filter(Boolean))];
+		if (distinctMerchants.length !== 1) return { prompted: false, saved: false };
+
+		const merchantText = distinctMerchants[0];
+		const existingExactRule = (merchantSettings ?? []).some(
+			(rule) => rule.type === "equals" && rule.text?.toLowerCase() === merchantText.toLowerCase()
 		);
+		if (existingExactRule) return { prompted: false, saved: false };
+
+		const shouldSaveRule = window.confirm(
+			`Also save an exact-match merchant rule for "${merchantText}" to categorize future transactions as ${categoryName}?`
+		);
+		if (!shouldSaveRule) return { prompted: true, saved: false };
+
+		const saved = await upsertMerchantSetting({
+			text: merchantText,
+			type: "equals",
+			categoryName,
+		});
+
+		if (!saved) {
+			setNotification({ type: "error", message: "Category updated, but the merchant rule could not be saved." });
+			return { prompted: true, saved: false };
+		}
+
+		const refreshedMerchantSettings = await getMerchantSettings();
+		setMerchantSettings(refreshedMerchantSettings);
+		return { prompted: true, saved: true, merchantText };
+	};
+
+	const onClickCategory = async (categoryName) => {
+		const selectedTransactions = localTransactions.filter((t) => t.selected);
+		closeBulkActionsMenu();
+		const success = await setTransactionCategories(selectedTransactions, categoryName);
 
 		// If the update was successful, simply update the current set of local transactions with the new categories
-		if (success) await onSuccess(localTransactions.map((t) => (t.selected ? { ...t, categoryName } : t)));
+		if (success) {
+			const nextTransactions = localTransactions.map((t) => (t.selected ? { ...t, categoryName } : t));
+			await onSuccess(nextTransactions);
+			const merchantRuleResult = await maybeCreateMerchantRule(selectedTransactions, categoryName);
+			if (localTransactions.filter((t) => t.selected).length > 0) {
+				setNotification({
+					type: "success",
+					message: merchantRuleResult.saved
+						? `Updated ${selectedTransactions.length} transaction${selectedTransactions.length === 1 ? "" : "s"} and saved an exact-match rule for ${merchantRuleResult.merchantText}.`
+						: `Updated ${selectedTransactions.length} transaction${selectedTransactions.length === 1 ? "" : "s"}.`,
+				});
+			}
+		}
 		else setNotification({ type: "error", message: "Could not update transaction(s)." });
 	};
 
@@ -59,8 +112,11 @@ const BulkActions = ({ localTransactions, setLocalTransactions }) => {
 	};
 
 	const onSuccess = async (newTransactions) => {
+		const persistedTransactions = newTransactions.map(({ selected, ...transaction }) => transaction);
 		setLocalTransactions(newTransactions);
-		setDashboardStats(await getDashboardStats(newTransactions, filters));
+		setTransactions(persistedTransactions);
+		setDashboardStats(await getDashboardStats(persistedTransactions, filters));
+		await fetchBudgets();
 	};
 
 	return (
@@ -127,12 +183,12 @@ const BulkActions = ({ localTransactions, setLocalTransactions }) => {
 									{getActiveCategories(categories).map((category) => (
 										<button
 											key={category.name}
-											className=" w-full text-xs text-slate-600 px-1 py-0.5 rounded"
-											style={{
-												backgroundColor: category.color,
-												borderWidth: "1px",
-												borderColor: category.colorDark,
-											}}
+											className=" w-full text-xs px-1 py-0.5 rounded font-medium"
+											style={getCategoryChipStyle({
+												color: category.color,
+												colorDark: category.colorDark,
+												theme,
+											})}
 											onClick={() => {
 												onClickCategory(category.name);
 											}}

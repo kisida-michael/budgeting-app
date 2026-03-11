@@ -1,10 +1,10 @@
 # Budget Rewrite
 
 ## Current Task
-- [x] Improve dark mode contrast on the Budgets screen, including category chips, progress rails, summary cards, and disabled actions.
-- [x] Improve dark mode contrast on the dashboard Plaid card and needs-attention badges.
-- [x] Improve dark mode contrast on the Transactions table header, saved-view pills, search input, and category chips.
-- [x] Verify the dark-mode polish pass with lint, typecheck, and build.
+- [x] Add budget and spending drilldowns that navigate into the Transactions dashboard with the relevant date/category filters applied.
+- [x] Add bulk recategorize follow-up UX that can optionally save a merchant rule when the selected transactions support a safe single-rule prompt.
+- [x] Finish migrating the remaining category-colored controls used by Spending, Merchants, filters, and bulk actions onto the shared dark-mode chip styles.
+- [x] Verify the drilldown and bulk recategorize pass with lint, typecheck, and build.
 
 ## Active Plan
 - [x] Clone the original source repository into this project root.
@@ -103,3 +103,9 @@
 - Applied the shared dark-mode category chip styling to Spending and Merchants so category pills stay readable anywhere category colors appear.
 - Tightened the Merchants settings pane controls, search field, empty states, and edit/create cards for dark mode.
 - Verified the dark-mode polish pass with `npm run lint`, `npm run typecheck`, and `npm run build`.
+- Added route-state transaction drilldowns from Budgets and Spending back into the dashboard Transactions table without adding new global store contracts.
+- Clicking a budget row now opens the dashboard with that month applied, and non-total rows also add the matching category filter.
+- Clicking spending category chips opens a year drilldown, while clicking monthly/yearly spending values opens the Transactions table filtered to that category and period.
+- Added an optional exact-match merchant-rule prompt after bulk recategorize when the selected transactions all share one merchant and no existing exact rule already exists.
+- Finished moving remaining category-colored controls in Spending, Merchants, dashboard stats, filter menus, and bulk actions onto the shared theme-aware chip styling.
+- Verified the drilldown and bulk recategorize pass with `npm run lint`, `npm run typecheck`, and `npm run build`.

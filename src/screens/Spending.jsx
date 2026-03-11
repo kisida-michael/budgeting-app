@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useDataStore } from "../util/dataStore";
 import { abbrevMonthsByNumber } from "../constants/Dates";
 import { ignoredCategories } from "../constants/Categories";
@@ -8,6 +9,7 @@ import Navbar from "../components/Navbar";
 import NotificationBanner from "../components/NotificationBanner";
 import ButtonSpinner from "../components/ButtonSpinner";
 import SpendingTableCategoryColumn from "../components/SpendingTableCategoryColumn";
+import { buildSpendingDrilldownFilters, createTransactionDrilldownState } from "../util/transactionDrilldown";
 
 const Spending = () => {
 	const {
@@ -32,6 +34,7 @@ const Spending = () => {
 		setNotification: state.setNotification,
 	}));
 	const [localSpendingLoading, setLocalSpendingLoading] = useState(false);
+	const navigate = useNavigate();
 
 	useEffect(() => {
 		if (categories === null) fetchCategories();
@@ -48,6 +51,15 @@ const Spending = () => {
 
 		updateSpending();
 	}, [setSpending, spendingYear]);
+
+	const openSpendingDrilldown = ({ category, month = null }) => {
+		const year = Number(spendingYear);
+		const filters = buildSpendingDrilldownFilters({ category, year, month });
+		const periodLabel = month ? `${abbrevMonthsByNumber[month]} ${year}` : `Year ${year}`;
+		navigate("/", {
+			state: createTransactionDrilldownState(filters, `${category?.name ?? "Total"} spending for ${periodLabel}`),
+		});
+	};
 
 	return (
 		<div className="w-screen h-screen flex overflow-hidden relative">
@@ -85,7 +97,12 @@ const Spending = () => {
 						<div className="flex items-center grow">
 							<div className="flex grow h-full px-5 overflow-x-auto pb-2">
 								{/* FIRST COLUMN WITH CATEGORY NAMES */}
-								<SpendingTableCategoryColumn categories={categories} isFirstColumn={true} />
+								<SpendingTableCategoryColumn
+									categories={categories}
+									isFirstColumn={true}
+									onCategoryClick={(category) => openSpendingDrilldown({ category })}
+									onTotalClick={() => openSpendingDrilldown({ category: { name: "Total" } })}
+								/>
 
 								{/* Table body with months and their spending (13 columns to accomodate for totals column) */}
 								{Array.from({ length: 13 }, (_, index) => {
@@ -119,9 +136,21 @@ const Spending = () => {
 																}`}
 																key={category.name}
 															>
-																<div className="py-1 px-2 rounded-md text-nowrap dark:text-neutral-300">
-																	{currentSpend ? currentSpend.toFixed(2) : "-"}
-																</div>
+																{currentSpend ? (
+																	<button
+																		onClick={() =>
+																			openSpendingDrilldown({
+																				category,
+																				month: index === 12 ? null : index + 1,
+																			})
+																		}
+																		className="py-1 px-2 rounded-md text-nowrap dark:text-neutral-300 hover:text-cGreen-light"
+																	>
+																		{currentSpend.toFixed(2)}
+																	</button>
+																) : (
+																	<div className="py-1 px-2 rounded-md text-nowrap dark:text-neutral-300">-</div>
+																)}
 															</div>
 														</Fragment>
 													);
@@ -155,12 +184,21 @@ const Spending = () => {
 																// style={{ backgroundColor: category.colorLight }}
 																key={category.name}
 															>
-																<div
-																	className="py-0.5 px-2 rounded-md text-nowrap"
-																	// style={{ backgroundColor: category.colorLight }}
-																>
-																	{currentSpend ? currentSpend.toFixed(2) : "-"}
-																</div>
+																{currentSpend ? (
+																	<button
+																		onClick={() =>
+																			openSpendingDrilldown({
+																				category,
+																				month: index === 12 ? null : index + 1,
+																			})
+																		}
+																		className="py-0.5 px-2 rounded-md text-nowrap dark:text-neutral-300 hover:text-cGreen-light"
+																	>
+																		{currentSpend.toFixed(2)}
+																	</button>
+																) : (
+																	<div className="py-0.5 px-2 rounded-md text-nowrap">-</div>
+																)}
 															</div>
 														</Fragment>
 													);
@@ -169,7 +207,12 @@ const Spending = () => {
 									);
 								})}
 
-								<SpendingTableCategoryColumn categories={categories} isFirstColumn={false} />
+								<SpendingTableCategoryColumn
+									categories={categories}
+									isFirstColumn={false}
+									onCategoryClick={(category) => openSpendingDrilldown({ category })}
+									onTotalClick={() => openSpendingDrilldown({ category: { name: "Total" } })}
+								/>
 							</div>
 						</div>
 					)}

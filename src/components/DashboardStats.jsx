@@ -2,14 +2,16 @@ import { useState, useRef } from "react";
 import { useDataStore } from "../util/dataStore";
 import { buildDefaultDateFilter } from "../constants/Filters";
 import DashboardStatsCategory from "./DashboardStatsCategory";
+import { getCategoryChipStyle } from "../util/themeStyles";
 
 const getDefaultStatsFilter = () => JSON.stringify([buildDefaultDateFilter()]);
 
 const DashboardStats = () => {
-	const { dashboardStats, dashboardStatsLoading } = useDataStore((state) => ({
+	const { dashboardStats, dashboardStatsLoading, theme } = useDataStore((state) => ({
 		dashboardStats: state.dashboardStats,
 		dashboardStatsLoading: state.dashboardStatsLoading,
 		filters: state.filters,
+		theme: state.theme,
 	}));
 
 	const [showAllCategories, setShowAllCategories] = useState(false);
@@ -55,11 +57,11 @@ const DashboardStats = () => {
 								<div className="text-sm text-slate-700 font-semibold mb-1 flex items-center justify-start">
 									<span
 										className="font-medium py-0.5 px-1 rounded mr-1"
-										style={{
-											backgroundColor: dashboardStats.category.colorLight,
-											borderWidth: "1px",
-											borderColor: dashboardStats.category.colorDark,
-										}}
+										style={getCategoryChipStyle({
+											color: dashboardStats.category.color,
+											colorDark: dashboardStats.category.colorDark,
+											theme,
+										})}
 									>
 										{dashboardStats.category.name}
 									</span>

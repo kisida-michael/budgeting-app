@@ -190,6 +190,7 @@ const TransactionTable = ({ transactions, setTransactions, transactionsLoading }
 
 	return (
 		<div
+			id="transactions-panel"
 			ref={tableRef}
 			className="w-full grow flex flex-col bg-white border border-slate-300 rounded-2xl dark:border-slate-700 dark:bg-slate-950/70"
 		>
