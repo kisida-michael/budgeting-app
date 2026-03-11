@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useDataStore } from "../util/dataStore";
-import { copyPreviousBudget, updateBudget } from "../util/supabaseQueries";
+import { copyPreviousBudget, saveDefaultBudget, updateBudget } from "../util/supabaseQueries";
 import { monthsByNumber } from "../constants/Dates";
 import { nonEditableCategories, ignoredCategories } from "../constants/Categories";
 import Navbar from "../components/Navbar";
@@ -41,6 +41,7 @@ const Budgets = () => {
 	const [editing, setEditing] = useState(false);
 	const [saving, setSaving] = useState(false);
 	const [copyingPrevious, setCopyingPrevious] = useState(false);
+	const [savingDefault, setSavingDefault] = useState(false);
 
 	useEffect(() => {
 		if (categories === null) fetchCategories();
@@ -84,7 +85,7 @@ const Budgets = () => {
 	};
 
 	const onCopyPreviousMonth = async () => {
-		if (copyingPrevious || editing) return;
+		if (copyingPrevious || editing || savingDefault) return;
 
 		setCopyingPrevious(true);
 		try {
@@ -102,6 +103,23 @@ const Budgets = () => {
 		} finally {
 			setCopyingPrevious(false);
 		}
+	};
+
+	const onSaveDefaultBudget = async () => {
+		if (savingDefault || saving || copyingPrevious || !localBudgets) return;
+
+		setSavingDefault(true);
+		const sourceBudgets = localBudgets.map((budget) => ({ ...budget }));
+		const success = await saveDefaultBudget(sourceBudgets);
+		if (success) {
+			setNotification({
+				type: "success",
+				message: "Saved the current budget as your default template.",
+			});
+		} else {
+			setNotification({ type: "error", message: "Could not save the default budget." });
+		}
+		setSavingDefault(false);
 	};
 
 	const totalBudget = localBudgets?.find((budget) => budget.name === "Total") ?? null;
@@ -183,6 +201,14 @@ const Budgets = () => {
 								{copyingPrevious ? "Copying..." : "Copy Previous"}
 							</button>
 							<button
+								onClick={onSaveDefaultBudget}
+								className={`border-slate-200 text-slate-500 hover:bg-slate-50 text-sm font-normal px-2 py-1 border-slate-300 border rounded ${
+									saving || copyingPrevious ? "opacity-50 cursor-default" : ""
+								}`}
+							>
+								{savingDefault ? "Saving..." : "Save as Default"}
+							</button>
+							<button
 								onClick={onClickEdit}
 								className="border-slate-200 text-slate-500 hover:bg-slate-50 text-sm font-normal px-2 py-1 border-slate-300 border rounded"
 							>
@@ -198,6 +224,10 @@ const Budgets = () => {
 								{saving && <ButtonSpinner />}
 							</button>
 						</div>
+					</div>
+					<div className="px-5 mb-3 text-sm text-slate-500">
+						`Save as Default` updates the reusable budget template. `Copy Previous` prefers the last
+						month's saved budget, then falls back to this default template.
 					</div>
 
 					{budgetsLoading && (

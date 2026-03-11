@@ -210,6 +210,25 @@ export const copyPreviousBudget = async (month, year) => {
 	});
 };
 
+export const saveDefaultBudget = async (newBudgets) => {
+	try {
+		await apiRequest("/api/budgets", {
+			method: "PUT",
+			body: JSON.stringify({
+				budgets: newBudgets
+					.filter((budget) => budget.name !== "Total")
+					.map((budget) => ({
+						categoryName: budget.name,
+						limit: budget.limit === "" ? null : budget.limit,
+					})),
+			}),
+		});
+		return true;
+	} catch {
+		return false;
+	}
+};
+
 export const getMerchantSettings = async () => {
 	try {
 		const data = await apiRequest("/api/merchants");

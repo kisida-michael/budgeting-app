@@ -4,8 +4,6 @@ import { filterTransactions } from "../util/filterUtil";
 import { buildDefaultDateFilter } from "../constants/Filters";
 import { getPlaidStatus } from "../util/supabaseQueries";
 
-const STALE_SYNC_DAYS = 3;
-
 const DashboardAttentionPanel = () => {
 	const { transactions, transactionsLoading, budgets, budgetsLoading, fetchBudgets } = useDataStore((state) => ({
 		transactions: state.transactions,
@@ -102,6 +100,26 @@ const DashboardAttentionPanel = () => {
 			};
 		}
 
+		const pendingItems = plaidStatus.items?.filter((item) => item.syncStatus === "pending") ?? [];
+		if (pendingItems.length > 0) {
+			return {
+				tone: "warning",
+				label: "Bank connected, sync pending",
+				detail: `${pendingItems.length} connection${pendingItems.length === 1 ? "" : "s"} still need an initial sync.`,
+			};
+		}
+
+		const staleItems = plaidStatus.items?.filter((item) => item.syncStatus === "stale") ?? [];
+		if (staleItems.length > 0 && plaidStatus.lastSyncAt) {
+			const lastSyncDate = new Date(plaidStatus.lastSyncAt);
+			const daysSinceSync = Math.floor((Date.now() - lastSyncDate.getTime()) / (1000 * 60 * 60 * 24));
+			return {
+				tone: "warning",
+				label: "Plaid sync is stale",
+				detail: `${staleItems.length} connection${staleItems.length === 1 ? "" : "s"} have not synced in ${daysSinceSync} day${daysSinceSync === 1 ? "" : "s"}.`,
+			};
+		}
+
 		if (!plaidStatus.lastSyncAt) {
 			return {
 				tone: "warning",
@@ -111,15 +129,6 @@ const DashboardAttentionPanel = () => {
 		}
 
 		const lastSyncDate = new Date(plaidStatus.lastSyncAt);
-		const daysSinceSync = Math.floor((Date.now() - lastSyncDate.getTime()) / (1000 * 60 * 60 * 24));
-		if (daysSinceSync >= STALE_SYNC_DAYS) {
-			return {
-				tone: "warning",
-				label: "Plaid sync is stale",
-				detail: `Last synced ${daysSinceSync} day${daysSinceSync === 1 ? "" : "s"} ago.`,
-			};
-		}
-
 		return {
 			tone: "ok",
 			label: `${plaidStatus.connectedAccounts} account${plaidStatus.connectedAccounts === 1 ? "" : "s"} connected`,

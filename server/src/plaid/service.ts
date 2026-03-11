@@ -9,6 +9,7 @@ const PLAID_CONFIGURATION_NAME = "Plaid";
 const DEFAULT_CATEGORY = "Uncategorized";
 const CREDIT_CATEGORY = "Credits/Payments";
 const INCOME_CATEGORY = "Income";
+const STALE_SYNC_DAYS = 3;
 
 type MerchantRule = {
   text: string;
@@ -39,6 +40,21 @@ function getDateParts(dateValue: string) {
     month: parsed.getUTCMonth() + 1,
     year: parsed.getUTCFullYear()
   };
+}
+
+function toNumericBalance(value: string | null) {
+  return value === null ? null : Number(value);
+}
+
+function getSyncStatus(lastSyncAt: Date | null) {
+  if (!lastSyncAt) {
+    return "pending";
+  }
+
+  const ageMs = Date.now() - lastSyncAt.getTime();
+  const ageDays = ageMs / (1000 * 60 * 60 * 24);
+
+  return ageDays >= STALE_SYNC_DAYS ? "stale" : "healthy";
 }
 
 function categorizePlaidTransaction(transaction: PlaidTransactionRecord, merchantRules: MerchantRule[]) {
@@ -238,9 +254,9 @@ export async function getPlaidStatus(userId: string) {
     })
   ]);
 
-  const accountsByItemId = new Map<string, number>();
+  const accountsByItemId = new Map<string, typeof accounts>();
   for (const account of accounts) {
-    accountsByItemId.set(account.itemId, (accountsByItemId.get(account.itemId) ?? 0) + 1);
+    accountsByItemId.set(account.itemId, [...(accountsByItemId.get(account.itemId) ?? []), account]);
   }
 
   const lastSyncAt = items.reduce<string | null>((latest, item) => {
@@ -253,12 +269,28 @@ export async function getPlaidStatus(userId: string) {
     connectedItems: items.length,
     connectedAccounts: accounts.length,
     lastSyncAt,
-    items: items.map((item) => ({
-      itemId: item.itemId,
-      institutionName: item.institutionName ?? item.institutionId ?? "Connected bank",
-      accountCount: accountsByItemId.get(item.itemId) ?? 0,
-      lastSyncAt: item.lastSyncAt?.toISOString() ?? null
-    }))
+    items: items.map((item) => {
+      const itemAccounts = accountsByItemId.get(item.itemId) ?? [];
+
+      return {
+        itemId: item.itemId,
+        institutionName: item.institutionName ?? item.institutionId ?? "Connected bank",
+        accountCount: itemAccounts.length,
+        lastSyncAt: item.lastSyncAt?.toISOString() ?? null,
+        syncStatus: getSyncStatus(item.lastSyncAt ?? null),
+        accounts: itemAccounts.map((account) => ({
+          accountId: account.accountId,
+          name: account.name,
+          officialName: account.officialName,
+          mask: account.mask,
+          type: account.type,
+          subtype: account.subtype,
+          currentBalance: toNumericBalance(account.currentBalance),
+          availableBalance: toNumericBalance(account.availableBalance),
+          isoCurrencyCode: account.isoCurrencyCode
+        }))
+      };
+    })
   };
 }
 

@@ -12,6 +12,37 @@ import {
 import { getDashboardStats } from "../util/statsUtil";
 import ButtonSpinner from "./ButtonSpinner";
 
+const formatBalance = (value, currencyCode = "USD") => {
+	if (value === null || value === undefined || Number.isNaN(Number(value))) {
+		return "--";
+	}
+
+	try {
+		return new Intl.NumberFormat("en-US", {
+			style: "currency",
+			currency: currencyCode || "USD",
+			maximumFractionDigits: 2,
+		}).format(Number(value));
+	} catch {
+		return Number(value).toFixed(2);
+	}
+};
+
+const syncStateConfig = {
+	healthy: {
+		label: "Healthy",
+		className: "border-cGreen-light bg-cGreen-light/40 text-slate-700",
+	},
+	stale: {
+		label: "Stale",
+		className: "border-amber-300 bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:border-amber-700",
+	},
+	pending: {
+		label: "Pending sync",
+		className: "border-slate-200 bg-slate-50 text-slate-500",
+	},
+};
+
 const PlaidConnectionCard = () => {
 	const { filters, setTransactions, setDashboardStats, fetchBudgets, fetchTotalTransactionCount, setNotification } =
 		useDataStore((state) => ({
@@ -151,12 +182,14 @@ const PlaidConnectionCard = () => {
 					<div className="text-slate-500 text-sm">
 						{status.available
 							? status.connectedItems > 0
-								? `${status.connectedItems} bank connection${status.connectedItems === 1 ? "" : "s"} linked`
+								? `${status.connectedAccounts} cached account${status.connectedAccounts === 1 ? "" : "s"} across ${status.connectedItems} connection${status.connectedItems === 1 ? "" : "s"}`
 								: "Plaid is configured and ready for bank connections."
 							: "Plaid setup is not finished yet for this environment."}
 					</div>
 					<div className="text-xs text-slate-400 mt-1">
-						{status.reason || `Connected accounts: ${status.connectedAccounts}`}
+						{status.available
+							? "Balances shown below are cached from the latest Plaid sync."
+							: status.reason || "Plaid is unavailable in this environment."}
 					</div>
 					{status.lastSyncAt && (
 						<div className="text-xs text-slate-400 mt-1">
@@ -194,38 +227,81 @@ const PlaidConnectionCard = () => {
 					{status.items.map((item) => (
 						<div
 							key={item.itemId}
-							className="border border-slate-200 rounded-xl px-4 py-3 flex justify-between items-center gap-4"
+							className="border border-slate-200 rounded-xl px-4 py-3 flex flex-col gap-3"
 						>
-							<div>
-								<div className="text-sm font-medium text-slate-600">{item.institutionName}</div>
-								<div className="text-xs text-slate-400">
-									{item.accountCount} account{item.accountCount === 1 ? "" : "s"}
-									{item.lastSyncAt ? ` • synced ${new Date(item.lastSyncAt).toLocaleString("en-US")}` : ""}
+							<div className="flex justify-between items-start gap-4">
+								<div>
+									<div className="flex items-center gap-2 flex-wrap">
+										<div className="text-sm font-medium text-slate-600">{item.institutionName}</div>
+										<span
+											className={`border rounded-full px-2 py-0.5 text-xs ${
+												syncStateConfig[item.syncStatus]?.className ?? syncStateConfig.pending.className
+											}`}
+										>
+											{syncStateConfig[item.syncStatus]?.label ?? syncStateConfig.pending.label}
+										</span>
+									</div>
+									<div className="text-xs text-slate-400">
+										{item.accountCount} account{item.accountCount === 1 ? "" : "s"}
+										{item.lastSyncAt ? ` • synced ${new Date(item.lastSyncAt).toLocaleString("en-US")}` : ""}
+									</div>
+								</div>
+								<div className="flex gap-2">
+									<button
+										onClick={() => handleSync(item.itemId)}
+										disabled={loading !== null}
+										className={`${
+											loading !== null ? "opacity-50 cursor-default" : ""
+										} relative border-slate-200 text-slate-500 hover:bg-slate-50 text-xs font-normal px-2 py-1 border border-slate-300 rounded`}
+									>
+										<span className={`${loading === `sync:${item.itemId}` ? "opacity-0" : ""}`}>Sync</span>
+										{loading === `sync:${item.itemId}` && <ButtonSpinner />}
+									</button>
+									<button
+										onClick={() => handleDisconnect(item.itemId)}
+										disabled={loading !== null}
+										className={`${
+											loading !== null ? "opacity-50 cursor-default" : ""
+										} relative border border-slate-300 rounded text-xs px-2 py-1 text-slate-500 hover:bg-slate-50`}
+									>
+										<span className={`${loading === `disconnect:${item.itemId}` ? "opacity-0" : ""}`}>
+											Disconnect
+										</span>
+										{loading === `disconnect:${item.itemId}` && <ButtonSpinner />}
+									</button>
 								</div>
 							</div>
-							<div className="flex gap-2">
-								<button
-									onClick={() => handleSync(item.itemId)}
-									disabled={loading !== null}
-									className={`${
-										loading !== null ? "opacity-50 cursor-default" : ""
-									} relative border-slate-200 text-slate-500 hover:bg-slate-50 text-xs font-normal px-2 py-1 border border-slate-300 rounded`}
-								>
-									<span className={`${loading === `sync:${item.itemId}` ? "opacity-0" : ""}`}>Sync</span>
-									{loading === `sync:${item.itemId}` && <ButtonSpinner />}
-								</button>
-								<button
-									onClick={() => handleDisconnect(item.itemId)}
-									disabled={loading !== null}
-									className={`${
-										loading !== null ? "opacity-50 cursor-default" : ""
-									} relative border border-slate-300 rounded text-xs px-2 py-1 text-slate-500 hover:bg-slate-50`}
-								>
-									<span className={`${loading === `disconnect:${item.itemId}` ? "opacity-0" : ""}`}>
-										Disconnect
-									</span>
-									{loading === `disconnect:${item.itemId}` && <ButtonSpinner />}
-								</button>
+							<div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
+								{item.accounts?.length > 0 ? (
+									item.accounts.map((account) => (
+										<div
+											key={account.accountId}
+											className="border border-slate-200 rounded-lg px-3 py-2 flex justify-between gap-3"
+										>
+											<div className="min-w-0">
+												<div className="text-sm font-medium text-slate-600 truncate">
+													{account.name}
+													{account.mask ? ` • ${account.mask}` : ""}
+												</div>
+												<div className="text-xs text-slate-400 truncate">
+													{account.officialName || `${account.subtype || account.type} account`}
+												</div>
+											</div>
+											<div className="text-right shrink-0">
+												<div className="text-sm font-semibold text-slate-600">
+													{formatBalance(account.currentBalance, account.isoCurrencyCode)}
+												</div>
+												<div className="text-xs text-slate-400">
+													Available {formatBalance(account.availableBalance, account.isoCurrencyCode)}
+												</div>
+											</div>
+										</div>
+									))
+								) : (
+									<div className="border border-dashed border-slate-200 rounded-lg px-3 py-3 text-sm text-slate-500">
+										No cached account details yet. Run sync to refresh balances.
+									</div>
+								)}
 							</div>
 						</div>
 					))}

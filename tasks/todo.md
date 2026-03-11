@@ -1,9 +1,9 @@
 # Budget Rewrite
 
 ## Current Task
-- [ ] Add an explicit `Save as Default` budget action that writes the reusable template without affecting the current month-specific flow.
-- [ ] Surface the default-template action in the preserved Budgets screen next to save/copy actions.
-- [ ] Verify the default-budget follow-up with lint, typecheck, and build.
+- [x] Extend the Plaid status payload with cached account details and clearer sync-health metadata.
+- [x] Update the preserved dashboard Plaid card to show connected accounts, cached balances, and per-item sync status without adding paid Plaid products.
+- [x] Keep the Plaid visibility pass additive to the current dashboard layout and verify with lint, typecheck, and build.
 
 ## Active Plan
 - [x] Clone the original source repository into this project root.
@@ -82,3 +82,10 @@
 - Added `POST /api/budgets/copy-previous` and updated `PUT /api/budgets` to support month/year-scoped edits for copy-forward workflows.
 - Updated the preserved Budgets screen with summary cards, a copy-previous action, per-category remaining/forecast/safe-to-spend metrics, and stronger over-budget visual treatment.
 - Verified the budget pass with `npm run lint`, `npm run typecheck`, `npm run build`, `npm run db:migrate`, and a `tsx` smoke script covering copy-forward plus derived budget metrics.
+- Added an explicit `Save as Default` budget action in the preserved Budgets screen that writes the reusable template through the existing non-period-scoped budget API path.
+- Documented in the UI that `Copy Previous` uses the last month-specific budget when present and falls back to the saved default template otherwise.
+- Verified the default-budget follow-up with `npm run lint`, `npm run typecheck`, and `npm run build`.
+- Extended the Plaid status payload to include grouped cached account details, numeric cached balances, and item-level sync status derived from the last successful sync timestamp.
+- Updated the preserved dashboard Plaid card to show account rows with mask, subtype, cached current/available balances, and per-institution sync-health badges while preserving the existing card placement and actions.
+- Tightened the dashboard attention panel so Plaid warnings now respect item-level `pending` and `stale` sync states instead of only the latest top-level timestamp.
+- Verified the Plaid visibility pass with `npm run lint`, `npm run typecheck`, and `npm run build`.
